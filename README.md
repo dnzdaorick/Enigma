@@ -160,32 +160,70 @@ The user simply enters the key combination (e.g., `1, 2`), and the program autom
 
 ### Workflow & Pipeline Diagram
 
-```mermaid
-flowchart TD
-    User(["User Terminal"]) -->|"Launch"| Main[["main.py: CLI Entry Point"]]
-    Main --> MenuModule[["menu_module.py: Interactive Menus"]]
-    
-    MenuModule -->|"Option A: Encrypt"| EncryptFlow["Message Encryption"]
-    MenuModule -->|"Option B: Decrypt"| DecryptFlow["Message Decryption"]
-    MenuModule -->|"Option C: Generate Media Key"| KeyGen["key_module.py: Media Key Generator and Loader"]
-    MenuModule -->|"Option D: Manage and Inspect Keys"| KeyMgmt["key_module.py: Key Inspector and Storage"]
-    MenuModule -->|"Option X: Exit"| ExitApp(["Clean Exit"])
-
-    EncryptFlow --> KeySelect{"Select 1, 2, or N Keys"}
-    DecryptFlow --> KeySelect
-
-    KeySelect -->|"Key Store"| KeyStore[("keys.json")]
-    KeySelect -->|"Direct Media Files"| MediaReader["media_cipher.py: read_media_bytes and media_to_code"]
-    
-    MediaReader --> CipherEngine[["media_cipher.py: MultiKeyCipher"]]
-    KeyStore --> CipherEngine
-    
-    CipherEngine -->|"Layer 1: Key A"| L1["Rotor Layer 1"]
-    L1 -->|"Layer 2: Key B"| L2["Rotor Layer 2"]
-    L2 -->|"Layer N: Key N"| LN["Rotor Layer N"]
-    
-    LN --> Results["Rich UI Pipeline Display"]
-    LN --> Logs[("Encryption.txt / Decryption.txt")]
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           USER TERMINAL / CLI                               │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Launch
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       main.py (Application Entry Point)                     │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Initializes & Routes
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     menu_module.py (Interactive Menus)                      │
+├─────────────────┬─────────────────┬───────────────────┬─────────────────────┤
+│   [Option A]    │   [Option B]    │    [Option C]     │     [Option D]      │
+│     Encrypt     │     Decrypt     │   Generate Key    │  Manage & Inspect   │
+│     Message     │     Message     │   (Audio/Image)   │     (keys.json)     │
+└────────┬────────┴────────┬────────┴─────────┬─────────┴──────────┬──────────┘
+         │                 │                  │                    │
+         │  Select 1, 2,   │                  │ Scan / Load        │ Key Mgmt
+         │  or N Keys      │                  ▼                    ▼
+         │                 │         ┌───────────────────┐ ┌──────────────────┐
+         └────────┬────────┘         │   key_module.py   │ │  keys.json Store │
+                  ▼                  │ • media/audio/    │ │ • JSON metadata  │
+┌──────────────────────────────────┐ │ • media/images/   │ │ • View / Inspect │
+│     Multi-Key Selection Flow     │ │ • SHA-256 Hashing │ │ • Delete Key     │
+│  (Single, Double, or N-Cascade)  │ └─────────┬─────────┘ └──────────────────┘
+└─────────────────┬────────────────┘           │ Saves Key
+                  │ Resolved Key Dicts         ▼
+                  │                  ┌───────────────────┐
+                  ├─────────────────►│     keys.json     │
+                  │                  └───────────────────┘
+                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    media_cipher.py (MultiKeyCipher Engine)                  │
+│                                                                             │
+│   Input Message (Plaintext)                                                 │
+│        │                                                                    │
+│        ▼                                                                    │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │ ROTOR LAYER 1 (Key A)  • 95-Character Bijective Character Mapping   │   │
+│   └──────────────────────────────────┬──────────────────────────────────┘   │
+│                                      │ Intermediate Ciphertext 1            │
+│                                      ▼                                      │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │ ROTOR LAYER 2 (Key B)  • Compounded Multi-Rotor Scrambling          │   │
+│   └──────────────────────────────────┬──────────────────────────────────┘   │
+│                                      │ Intermediate Ciphertext 2            │
+│                                      ▼                                      │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │ ROTOR LAYER N (Key N)  • N-th Sequential Ciphertext Scrambling      │   │
+│   └──────────────────────────────────┬──────────────────────────────────┘   │
+│                                      │                                      │
+│                                      ▼                                      │
+│                           Final Output (Ciphertext)                         │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │ Output & Audit Logging
+                       ┌───────────────┴───────────────┐
+                       ▼                               ▼
+        ┌─────────────────────────────┐ ┌─────────────────────────────┐
+        │      Rich Terminal UI       │ │     Audit Log Storage       │
+        │ • Styled Result Panel Card  │ │ • Encryption.txt            │
+        │ • Rotor Pipeline Table View │ │ • Decryption.txt            │
+        └─────────────────────────────┘ └─────────────────────────────┘
 ```
 
 ### Repository Structure
