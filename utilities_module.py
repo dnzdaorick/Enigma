@@ -1,10 +1,23 @@
 import os
+import sys
 import time
 import random
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
+
+# Ensure UTF-8 output encoding for terminals across platforms
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 console = Console()
 

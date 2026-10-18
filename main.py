@@ -7,7 +7,7 @@ from menu_module import (
     menu_options,
     encrypt_menu,
     decrypt_menu,
-    generate_media_key_menu,
+    generate_key_menu,
     key_management_menu,
 )
 
@@ -16,7 +16,7 @@ console = Console()
 ACTION_DISPATCH = {
     "A": encrypt_menu,
     "B": decrypt_menu,
-    "C": generate_media_key_menu,
+    "C": generate_key_menu,
     "D": key_management_menu,
 }
 
@@ -60,7 +60,7 @@ def main() -> None:
     """Initializes menu options and launches the main application loop."""
     Menu("A", "Encrypt Message", "bold green").add_option()
     Menu("B", "Decrypt Message", "bold yellow").add_option()
-    Menu("C", "Generate Media Key", "bold blue").add_option()
+    Menu("C", "Generate Key", "bold blue").add_option()
     Menu("D", "Manage & Inspect Keys", "bold magenta").add_option()
     Menu("X", "Exit Program", "bold red").add_option()
 

@@ -106,6 +106,19 @@ generate_key_from_image = generate_key_from_bytes
 read_image_bytes = read_media_bytes
 image_to_code = media_to_code
 
+# Import classical ciphers from dedicated cipher_module
+from cipher_module import (
+    generate_monoalphabetic_key,
+    generate_vigenere_key,
+    generate_xor_key,
+    vigenere_classical_encrypt,
+    vigenere_classical_decrypt,
+    vigenere_encrypt,
+    vigenere_decrypt,
+    xor_encrypt,
+    xor_decrypt,
+)
+
 
 def create_sample_bmp_image(output_path: str, width: int = 128, height: int = 128) -> str:
     """Generates a valid 24-bit uncompressed BMP image using pure Python standard library."""
@@ -208,7 +221,17 @@ class MultiKeyCipher:
         layer_logs: list[dict[str, str]] = []
 
         for idx, (key_id, mapping, meta) in enumerate(self.key_layers, start=1):
-            substituted = "".join(mapping.get(char, char) for char in current_text)
+            cipher_type = meta.get("cipher_type", meta.get("media_type", "media")).lower()
+            if cipher_type == "vigenere":
+                key_val = meta.get("key_value", "")
+                variant = meta.get("variant", "classical")
+                substituted = vigenere_encrypt(current_text, key_val, variant)
+            elif cipher_type == "xor":
+                key_val = meta.get("key_value", "")
+                substituted = xor_encrypt(current_text, key_val)
+            else:
+                substituted = "".join(mapping.get(char, char) for char in current_text)
+
             layer_logs.append({
                 "layer": str(idx),
                 "key_id": key_id,
@@ -224,20 +247,33 @@ class MultiKeyCipher:
 
         return current_text
 
-    def decrypt(self) -> str:
-        """Decrypts message through all key layers in reverse order (Layer N -> ... -> Layer 2 -> Layer 1)."""
+    def _unwind_cascade(
+        self, layers: list[tuple[str, dict[str, str], dict[str, str]]]
+    ) -> tuple[str, list[dict[str, str]], bool]:
+        """Performs a single pass of unwinding through the given layer sequence."""
         current_text = self.message
         layer_logs: list[dict[str, str]] = []
+        total_layers = len(layers)
+        xor_hex_valid = True
 
-        # Reverse key layers for decryption cascade
-        reversed_layers = list(reversed(self.key_layers))
-        total_layers = len(reversed_layers)
-
-        for step_idx, (key_id, mapping, meta) in enumerate(reversed_layers, start=1):
+        for step_idx, (key_id, mapping, meta) in enumerate(layers, start=1):
             layer_num = total_layers - step_idx + 1
-            # Precompute inverse mapping
-            inverse_map = {v: k for k, v in mapping.items()}
-            restored = "".join(inverse_map.get(char, char) for char in current_text)
+            cipher_type = meta.get("cipher_type", meta.get("media_type", "media")).lower()
+            if cipher_type == "vigenere":
+                key_val = meta.get("key_value", "")
+                variant = meta.get("variant", "classical")
+                restored = vigenere_decrypt(current_text, key_val, variant)
+            elif cipher_type == "xor":
+                key_val = meta.get("key_value", "")
+                try:
+                    bytes.fromhex(current_text.strip())
+                except (ValueError, TypeError):
+                    xor_hex_valid = False
+                restored = xor_decrypt(current_text, key_val)
+            else:
+                inverse_map = {v: k for k, v in mapping.items()}
+                restored = "".join(inverse_map.get(char, char) for char in current_text)
+
             layer_logs.append({
                 "step": str(step_idx),
                 "layer_unwound": str(layer_num),
@@ -248,6 +284,92 @@ class MultiKeyCipher:
                 "intermediate": restored,
             })
             current_text = restored
+
+        return current_text, layer_logs, xor_hex_valid
+
+    @staticmethod
+    def _score_candidate_plaintext(text: str, xor_hex_valid: bool) -> float:
+        """Scores candidate decrypted text based on printable characters and language plausibility."""
+        if not text:
+            return -9999.0
+        score = 100.0 if xor_hex_valid else -100.0
+        common_bigrams = {
+            "th", "he", "in", "er", "an", "re", "ed", "on", "es", "st",
+            "en", "at", "to", "nt", "ha", "nd", "ou", "ea", "ng", "as",
+            "or", "ti", "is", "et", "it", "ar", "te", "se", "hi", "of",
+            "al", "le", "lo", "ow", "wo", "rl", "ld", "me", "sa", "ag",
+            "ge", "ec", "cr", "et"
+        }
+        for c in text:
+            if c in string.ascii_letters or c == " ":
+                score += 2.0
+            elif c in string.digits or c in ".,!?'\"-:;()[]{}":
+                score += 1.0
+            elif c in string.printable:
+                score += 0.2
+            else:
+                score -= 30.0
+
+        clean_text = "".join(c.lower() for c in text if c.isalpha())
+        if len(clean_text) >= 2:
+            bigram_matches = sum(
+                1 for i in range(len(clean_text) - 1) if clean_text[i : i + 2] in common_bigrams
+            )
+            score += bigram_matches * 15.0
+
+        return score
+
+    @classmethod
+    def determine_unwind_sequence(
+        cls,
+        key_layers: list[tuple[str, dict[str, str], dict[str, str]]],
+        ciphertext: str,
+    ) -> list[tuple[str, dict[str, str], dict[str, str]]]:
+        """Determines the correct physical layer sequence to unwind during decryption.
+        
+        Seamlessly handles both:
+        - User entered forward encryption sequence (1, 2, 3) -> returns [3, 2, 1]
+        - User entered reverse unwinding sequence (3, 2, 1) -> returns [3, 2, 1]
+        """
+        if len(key_layers) <= 1:
+            return list(key_layers)
+
+        rev_layers = list(reversed(key_layers))
+        fwd_layers = list(key_layers)
+
+        # 1. Deterministic XOR hex check:
+        # If XOR is in the cascade, the ciphertext is in hex. The first layer to unwind must be XOR.
+        first_fwd_type = fwd_layers[0][2].get("cipher_type", fwd_layers[0][2].get("media_type", "")).lower()
+        first_rev_type = rev_layers[0][2].get("cipher_type", rev_layers[0][2].get("media_type", "")).lower()
+
+        if first_fwd_type == "xor" and first_rev_type != "xor":
+            return fwd_layers
+        if first_rev_type == "xor" and first_fwd_type != "xor":
+            return rev_layers
+
+        # 2. Both or neither have XOR first: simulate unwinding both candidates and score readability
+        inst_rev = cls(ciphertext, rev_layers, show_ui=False)
+        text_rev, _, hex_ok_rev = inst_rev._unwind_cascade(rev_layers)
+        score_rev = cls._score_candidate_plaintext(text_rev, hex_ok_rev)
+
+        inst_fwd = cls(ciphertext, fwd_layers, show_ui=False)
+        text_fwd, _, hex_ok_fwd = inst_fwd._unwind_cascade(fwd_layers)
+        score_fwd = cls._score_candidate_plaintext(text_fwd, hex_ok_fwd)
+
+        if score_fwd > score_rev:
+            return fwd_layers
+        return rev_layers
+
+    def decrypt(self) -> str:
+        """Decrypts message through key layers with smart bidirectional unwinding support.
+        
+        Seamlessly supports both:
+        1. Original encryption sequence (e.g. 1, 2, 3, 4, 5) -> auto-reverses to 5, 4, 3, 2, 1
+        2. Manual reverse sequence (e.g. 5, 4, 3, 2, 1) -> unwinds directly 5, 4, 3, 2, 1
+        """
+        unwind_sequence = self.determine_unwind_sequence(self.key_layers, self.message)
+        self.actual_unwind_layers = unwind_sequence
+        current_text, layer_logs, _ = self._unwind_cascade(unwind_sequence)
 
         if self.show_ui:
             self._display_results("Decryption", self.message, current_text, layer_logs)
@@ -273,13 +395,24 @@ class MultiKeyCipher:
         )
         pipeline_table.add_column("Stage", style="bold yellow", justify="center", width=7)
         pipeline_table.add_column("Key #", style="bold white", justify="center", width=8)
-        pipeline_table.add_column("Type", style="cyan", justify="center", width=10)
-        pipeline_table.add_column("Source File", style="green", justify="left")
+        pipeline_table.add_column("Type", style="cyan", justify="center", width=12)
+        pipeline_table.add_column("Source / Key", style="green", justify="left")
         pipeline_table.add_column("SHA-256 Code", style="dim", justify="left")
 
         for log in layer_logs:
             m_type = log["media_type"].lower()
-            icon = "🖼️ Image" if m_type == "image" else ("🎵 Music" if m_type == "music" else "📁 Media")
+            if m_type == "image":
+                icon = "🖼️ Image"
+            elif m_type == "music":
+                icon = "🎵 Music"
+            elif m_type == "monoalphabetic":
+                icon = "🔤 Mono"
+            elif m_type == "vigenere":
+                icon = "🗝️ Vigenère"
+            elif m_type == "xor":
+                icon = "⚡ XOR"
+            else:
+                icon = "📁 Media"
             code_preview = log["code"][:16] + "..." if len(log["code"]) > 16 else log["code"]
             stage_label = f"L{log.get('layer', log.get('layer_unwound', '?'))}"
             pipeline_table.add_row(

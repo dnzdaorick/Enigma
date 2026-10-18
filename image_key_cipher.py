@@ -19,6 +19,13 @@ from media_cipher import (
     create_sample_wav_music,
     MultiKeyCipher,
     ImageKeyCipher,
+    generate_monoalphabetic_key,
+    vigenere_encrypt,
+    vigenere_decrypt,
+    generate_vigenere_key,
+    xor_encrypt,
+    xor_decrypt,
+    generate_xor_key,
 )
 
 __all__ = [
@@ -40,4 +47,11 @@ __all__ = [
     "create_sample_wav_music",
     "MultiKeyCipher",
     "ImageKeyCipher",
+    "generate_monoalphabetic_key",
+    "vigenere_encrypt",
+    "vigenere_decrypt",
+    "generate_vigenere_key",
+    "xor_encrypt",
+    "xor_decrypt",
+    "generate_xor_key",
 ]

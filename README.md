@@ -31,7 +31,7 @@ A minimal, multi-layer terminal cryptography suite implemented in Python. The ap
   - [Main Menu Navigation](#main-menu-navigation)
   - [Option A: Encrypt Message](#option-a-encrypt-message)
   - [Option B: Decrypt Message](#option-b-decrypt-message)
-  - [Option C: Generate Media Key](#option-c-generate-media-key)
+  - [Option C: Generate Key](#option-c-generate-key)
   - [Option D: Manage & Inspect Keys](#option-d-manage--inspect-keys)
 - [Key Storage & JSON Persistence](#key-storage--json-persistence)
 - [Audit Logging System](#audit-logging-system)
@@ -42,12 +42,11 @@ A minimal, multi-layer terminal cryptography suite implemented in Python. The ap
 
 ## Overview
 
-Traditional substitution ciphers rely on manually configured alphabets or pseudo-random letter shuffles. **Enigma** takes inspiration from physical multi-rotor encryption (such as the historic Enigma machine) and combines it with modern media hashing:
-
-1. **Any Media as a Key**: Point the program to any image file or music/sound file.
-2. **Turn Media into Code**: The program converts the file's raw binary data into a cryptographic **SHA-256 fingerprint**.
-3. **95-Character Scrambling**: Derives a complete substitution map covering lowercase letters (`a-z`), uppercase letters (`A-Z`), digits (`0-9`), and symbols/spaces.
-4. **Multi-Key Combination**: Choose 1 key, or combine **Image + Music**, or chain **3 or more keys** together into a layered cascade.
+Traditional substitution ciphers rely on manually configured alphabets or pseudo-random letter shuffles. **Enigma** takes inspiration from physical multi-rotor encryption (such as the historic Enigma machine) and combines it with modern cryptographic techniques:
+1. **Any Media as a Key**: Transform digital images (PNG, JPG, BMP, etc.) and audio (MP3, WAV, etc.) into high-entropy cryptographic keys via SHA-256 fingerprinting.
+2. **Classical & Modern Cipher Keys**: Generate Monoalphabetic substitution keys, Vigenère polyalphabetic keys, and bitwise XOR keys.
+3. **95-Character Scrambling**: Derives complete substitution maps covering lowercase letters (`a-z`), uppercase letters (`A-Z`), digits (`0-9`), and symbols/spaces.
+4. **Multi-Rotor Cascade**: Freely combine 1, 2, or more keys across any cipher types to form a layered cryptographic pipeline.
 
 ---
 
@@ -134,25 +133,35 @@ Each subsequent layer scrambles the output of the previous layer, compounding co
 To decrypt a multi-key message, the ciphertext must pass through the **inverse mappings in exact reverse order (LIFO - Last In, First Out)**:
 
 ```text
-Final Ciphertext:  "w$2a9%K;r!o8fc...5#rFCtt"
+Final Ciphertext:  "2a37273d2d383c352d" (Hex from Layer 3)
                    │
                    ▼
 ┌────────────────────────────────────────────────────────┐
-│  STEP 1: Invert Layer 2 (🎵 Music Key #2)              │
-│  Applies inverse mapping of Key #2                     │
+│  STEP 1: Invert Layer 3 (⚡ XOR Key #3)                 │
+│  Decodes hex into raw bytes and applies A ⊕ B          │
 └──────────────────┬─────────────────────────────────────┘
-                   │ Restores Intermediate Ciphertext 1
+                   │ Restores Intermediate Ciphertext 2 ("grhjauyzz")
                    ▼
 ┌────────────────────────────────────────────────────────┐
-│  STEP 2: Invert Layer 1 (🖼️ Image Key #1)              │
-│  Applies inverse mapping of Key #1                     │
+│  STEP 2: Invert Layer 2 (🗝️ Vigenère Key #2)            │
+│  Applies modular shift: (C - K) mod 26                 │
+└──────────────────┬─────────────────────────────────────┘
+                   │ Restores Intermediate Ciphertext 1 ("vnvvnvnvn")
+                   ▼
+┌────────────────────────────────────────────────────────┐
+│  STEP 3: Invert Layer 1 (🔤 Monoalphabetic Key #1)      │
+│  Applies inverse character permutation mapping         │
 └──────────────────┬─────────────────────────────────────┘
                    │
                    ▼
-Original Plaintext: "Secret 2026: Hello World! #TopSecret"
+Original Plaintext: "lallalala"
 ```
 
-The user simply enters the key combination (e.g., `1, 2`), and the program automatically unwinds the layers in reverse order.
+#### Smart Bidirectional Unwinding
+Enigma's engine automatically determines the correct layer unwinding sequence via `MultiKeyCipher.determine_unwind_sequence()`:
+- **Forward Input (`1 2 3` or `1, 2, 3`)**: Automatically recognized as the original cascade order and reversed to `3 ➔ 2 ➔ 1`.
+- **Reverse Input (`3 2 1` or `3, 2, 1`)**: Recognized as the physical unwinding order and executed directly `3 ➔ 2 ➔ 1`.
+- **Deterministic XOR Unpacking**: If an XOR cipher layer was used, the ciphertext is in hexadecimal format. The engine automatically unwinds XOR first to decode the hex bytes into characters before applying Vigenère modular shifts or Monoalphabetic substitution.
 
 ---
 
@@ -234,10 +243,14 @@ Enigma Machine/
 ├── menu_module.py            # Menu UI flows, input validation, and dispatchers
 ├── key_module.py             # Key store, JSON persistence, image/music key registration
 ├── media_cipher.py           # Core cryptographic engine (Image + Music + Multi-Key Cascade)
+├── cipher_module.py          # Classical ciphers (Monoalphabetic, Classical Vigenère, Bitwise XOR)
+├── crypto_info_module.py     # On-demand cryptographic dossiers & comparative algorithm overview
+├── process_dissection_module.py # Mathematical process dissection & linked execution
 ├── image_key_cipher.py       # Backward-compatibility alias re-exporting media_cipher
 ├── utilities_module.py       # Cross-platform terminal helpers, progress animations
 ├── mesage_encryptor.py       # Cryptographic message data model with media metadata
-├── test_enigma.py            # Automated unit test suite (unittest)
+├── test_enigma.py            # Automated unit test suite (24 tests with unittest)
+├── PRESENTATION_SCRIPT.md    # Complete demonstration script and technical speaking points
 ├── keys.json                 # Persistent key storage file (auto-generated)
 ├── media/                    # Media assets used for key generation
 │   ├── audio/                # Audio files (e.g., Howling sound.mp3)
@@ -256,10 +269,13 @@ Enigma Machine/
 |---|---|---|
 | [main.py](main.py) | `main()`, `main_menu()` | Registers main menu options, dispatches user actions, and manages clean exit routines. |
 | [menu_module.py](menu_module.py) | [`Menu`](menu_module.py), `encrypt_menu()`, `decrypt_menu()`, `key_selection_menu()` | Coordinates user prompts, validates single and multi-key inputs, and runs animated progress bars. |
-| [key_module.py](key_module.py) | `register_media_file()`, `generate_sample_image()`, `generate_sample_music()`, `parse_and_resolve_keys()` | Manages Image and Music keys, persists metadata in `keys.json`, and parses multi-key arguments. |
-| [media_cipher.py](media_cipher.py) | [`MultiKeyCipher`](media_cipher.py), `create_sample_bmp_image()`, `create_sample_wav_music()` | Converts image and audio files into cryptographic codes, executes multi-layer cascade substitution, and logs results. |
+| [key_module.py](key_module.py) | `register_media_file()`, `generate_sample_image()`, `generate_sample_music()`, `parse_and_resolve_keys()` | Manages Image, Music, Monoalphabetic, Vigenère, and XOR keys; parses multi-key inputs with spaces or commas. |
+| [media_cipher.py](media_cipher.py) | [`MultiKeyCipher`](media_cipher.py), `create_sample_bmp_image()`, `create_sample_wav_music()` | Converts media into cryptographic codes, executes multi-layer cascades with smart bidirectional unwinding, and logs results. |
+| [cipher_module.py](cipher_module.py) | `generate_monoalphabetic_key()`, `vigenere_encrypt()`, `xor_encrypt()` | Algorithmic implementations for Classical Random Monoalphabetic, Classical Vigenère, and Hex-safe Bitwise XOR. |
+| [crypto_info_module.py](crypto_info_module.py) | `display_crypto_info()`, `display_key_generation_overview()` | Renders targeted, on-demand cryptographic dossiers and algorithm overviews upon key generation selection. |
+| [process_dissection_module.py](process_dissection_module.py) | `dissect_full_pipeline()`, `linked_encrypt_and_decrypt_mode()` | Dissects multi-layer transformations step-by-step with ASCII rules, modular shift formulas, and 8-bit binary XOR operations. |
 | [utilities_module.py](utilities_module.py) | `clear_screen()`, `progress_bar()`, `display_header()`, `prompt_delay()` | Terminal clearing, animated progress bars, and standardized visual banners. |
-| [test_enigma.py](test_enigma.py) | `TestMediaCipher`, `TestKeyModule`, `TestMenuModule` | 14 automated unit tests validating single-key, double-key (image + music), triple-key roundtrips, and persistence. |
+| [test_enigma.py](test_enigma.py) | `TestMediaCipher`, `TestKeyModule`, `TestNewCiphers`, `TestAdditionalFeatures` | 24 automated unit tests validating multi-key cascades, classical ciphers, parser syntax, and roundtrip symmetry. |
 
 ---
 
@@ -339,7 +355,7 @@ For a 2-key combination (Image + Music):
 
 [A] - Encrypt Message
 [B] - Decrypt Message
-[C] - Generate Media Key
+[C] - Generate Key
 [D] - Manage & Inspect Keys
 [X] - Exit Program
 
@@ -355,20 +371,25 @@ Enter option:
    ```text
    Enter message to encrypt: Top Secret 2026: Project Enigma [Launch Code #99!]
    ```
-3. A table of available keys is displayed. You can:
+3. A table of available keys is displayed. You can specify single or multiple keys using any delimiter:
    - **Use 1 key**: Type `1`
-   - **Combine 2 keys**: Type `1, 2` (e.g. 1, 2 to combine keys)
-   - **Combine 3 or more keys**: Type `1, 2, 3`
-   - **Use direct files**: Type `photo.png, song.mp3`
+   - **Combine with spaces**: Type `1 2 3 4 5`
+   - **Combine with commas**: Type `1, 2, 3`
+   - **Combine continuous digits**: Type `12345`
+   - **Direct media paths**: Type `"crazy cat.jpg" 2` or `photo.png, song.mp3`
 4. An animated progress bar simulates cipher execution:
    ```text
-   Encrypting (#1 + #2)... ━━━━━━━━━━ 100% 0.2s
+   Encrypting (#1 + #2 + #3)... ━━━━━━━━━━ 100% 0.2s
    ```
 5. A stylized **ENCRYPTION RESULT** card appears, displaying:
    - The input string.
    - The final encrypted ciphertext.
-   - A clean **Pipeline Table** showing each key stage, media icon, file name, and SHA-256 fingerprint.
+   - A clean **Pipeline Table** showing each key stage, type badge (🖼️ Image, 🎵 Music, 🔤 Mono, 🗝️ Vigenère, ⚡ XOR), source / key info, and SHA-256 fingerprint.
 6. The operation is logged to `Encryption.txt`.
+7. **Post-Encryption Actions**:
+   - Press **`[L]`** for **Linked Decryption Verification**: immediately feeds the ciphertext into the inverse decryption pipeline and verifies 100% exact match symmetry.
+   - Press **`[D]`** for **Cryptographic Process Dissection**: displays character-by-character and bitwise mathematical transformation tables.
+   - Press **`[Enter]`** to return to the main menu.
 
 ---
 
@@ -376,28 +397,50 @@ Enter option:
 
 1. Select option **`B`**.
 2. Enter or paste the ciphertext.
-3. Select the same key or key combination used during encryption (e.g. `1, 2`).
-4. The cipher executes the inverse decryption pipeline in reverse order.
+3. Select the key combination. Enigma features **Smart Bidirectional Unwinding**:
+   - Enter original forward sequence (e.g. `1 2 3 4 5` or `1, 2, 3`) ➔ auto-inverts to `5 ➔ 4 ➔ 3 ➔ 2 ➔ 1`.
+   - Enter manual reverse sequence (e.g. `5 4 3 2 1` or `5, 4, 3`) ➔ unwinds directly `5 ➔ 4 ➔ 3 ➔ 2 ➔ 1`.
+   - If an XOR layer is present, the engine automatically unwinds XOR first to decode the hex bytes into characters before applying Vigenère shifts or Monoalphabetic substitution.
+4. The cipher executes the inverse decryption pipeline in reverse order (LIFO).
 5. The original plaintext is restored and logged to `Decryption.txt`.
+6. **Post-Decryption Actions**:
+   - Press **`[D]`** to **Dissect Decryption Unwinding**: reveals stage-by-stage bitwise XOR byte transformations, modular subtraction, and inverse alphabet permutations.
+   - Press **`[Enter]`** to return to the main menu.
 
 ---
 
-### Option C: Generate Media Key
+### Option C: Generate Key
 
-Select option **`C`** to generate a key from your media folder (`media/audio` and `media/images`):
+Select option **`C`** to open the Key Generation Hub:
 
-1. Scans `media/` and automatically lists all available media files:
-   ```text
-   ╭───────────────────────── Available Media Files ─────────────────────────╮
-   │  #   │   Type   │ File Name         │ Folder        │        Size       │
-   ├──────┼──────────┼───────────────────┼───────────────┼───────────────────┤
-   │  1   │ 🎵 Audio │ Howling sound.mp3 │ media/audio   │         396.6 KB  │
-   │  2   │ 🖼️ Image │ crazy cat.jpg     │ media/images  │           3.5 KB  │
-   │  3   │ 🖼️ Image │ orange cat.jpg    │ media/images  │          13.5 KB  │
-   ╰──────┴──────────┴───────────────────┴───────────────┴───────────────────╯
-   ```
-2. Enter a number to select a file (e.g. `1` for default audio, `2` for an image, or `1, 2` for multiple), OR type a custom file path directly.
-3. Automatically computes the SHA-256 fingerprint, derives the 95-character substitution key, and registers it in `keys.json`.
+```text
+[1] Media Keys (Image or Audio file)
+[2] Monoalphabetic Cipher Key
+[3] Vigenère Cipher Key
+[4] XOR Cipher Key
+[5] Return to Main Menu
+```
+
+When any option is selected, the system displays an **on-demand Cryptographic Overview table** tailored specifically to that algorithm (Origins, Use cases, Pros, Cons, and mathematical details), keeping the interface clean and context-aware:
+
+#### 1. Media Keys (Image or Audio file)
+Scans `media/audio` and `media/images` and lists discovered files.
+- Select a file by number (`1`, `2`, or `1, 2`) or enter custom file paths.
+- Hashes binary content with SHA-256, seeds deterministic random generator, and shuffles all 95 printable ASCII characters.
+
+#### 2. Monoalphabetic Cipher Key
+Generates a classical random alphabet monoalphabetic substitution key without requiring a media file:
+- **Classical Random Alphabet**: Random 1-to-1 letter permutation (`a-z`, `A-Z`) with case matching, preserving digits, spaces, and punctuation symbols.
+
+#### 3. Vigenère Cipher Key
+Generates a classical polyalphabetic keystream key:
+- **Classical Vigenère**: Standard textbook alphabetic shift ($C_i = (P_i + K_i) \pmod{26}$) preserving cases, numbers, and symbols.
+- Enter a custom keyword (e.g. `LEMON`, `SECRET`) or press Enter for an auto-generated 12-character high-entropy keyword.
+
+#### 4. XOR Cipher Key
+Generates a classical bitwise XOR repeating keystream key:
+- **Classical XOR**: Repeating key bitwise XOR ($C_i = P_i \oplus K_i$) outputting clean hexadecimal representations for 100% loss-free storage and roundtrip decryption.
+- Enter a custom key string/passphrase or press Enter for an auto-generated 16-byte key.
 
 ---
 
@@ -412,9 +455,36 @@ Select option **`D`** to manage stored keys:
 [4] Return to Main Menu
 ```
 
-- **Show All Keys**: Lists all enrolled keys with icons (🖼️ Image / 🎵 Music), filenames, SHA-256 codes, and timestamps.
-- **Inspect Key Mapping**: Displays full 64-character SHA-256 code, file size, and complete character substitution tables (Alphabet, Numbers, Symbols).
+- **Show All Keys**: Lists all enrolled keys with type badges (🖼️ Image, 🎵 Music, 🔤 Mono, 🗝️ Vigenère, ⚡ XOR), sources, SHA-256 fingerprints, byte sizes, and timestamps.
+- **Inspect Key Mapping**:
+  - **Media / Monoalphabetic**: Full 64-character SHA-256 code, size, and complete character substitution tables (Alphabet, Numbers, Symbols).
+  - **Vigenère**: Keyword, variant mode, length, SHA-256 fingerprint, and live keystream shift sample table.
+  - **XOR**: Key string, hex representation, binary bit stream table, and SHA-256 fingerprint.
 - **Delete Key**: Permanently deletes a key from active memory and updates `keys.json`.
+
+---
+
+### In-Flow Cryptographic Intelligence & Process Dissection
+
+Educational dossiers and process dissection are integrated directly into the cryptographic workflow:
+
+#### 1. On-Demand Algorithm Overview (Option C)
+When choosing any cipher type under **`[C] Generate Key`**, the system renders:
+- **Targeted Overview Card**: Summarizes the chosen algorithm's history, practical applications, strengths, and weaknesses.
+- **Educational Framing**: Highlights the innovation of **Media Key Encryption** (deriving full-entropy 95-character permutation keys from multimedia assets).
+
+#### 2. Linked Decryption (`[L]` Hotkey)
+Immediately upon encrypting a message, press **`[L]`** to execute **Linked Cryptographic Execution**:
+- Instantly passes the fresh ciphertext into the inverse decryption pipeline.
+- Renders side-by-side verification: Input Plaintext $\to$ Intermediate Ciphertext $\to$ Restored Plaintext.
+- Automatically audits roundtrip symmetry: `✓ ROUNDTRIP INTEGRITY VERIFIED (100% Exact Match)`.
+
+#### 3. Mathematical Process Dissection Studio (`[D]` Hotkey)
+Immediately after encryption or decryption, press **`[D]`** for character-by-character and bit-by-bit mathematical breakdowns:
+- **Monoalphabetic**: Shows input char, ASCII code, substitution mapping rule, and output char.
+- **Vigenère**: Shows plain char, keystream letter, numerical shift, modular formula ($(P_i \pm S_i) \pmod{26}$), and result letter.
+- **XOR**: Exposes plaintext byte ($A$), 8-bit binary bits, key byte ($B$), bitwise XOR step ($A \oplus B$), and hexadecimal output (`0xHEX`).
+- **Media Keys**: Traces 95-character SHA-256 PRNG-seeded bijective substitutions.
 
 ---
 
@@ -485,15 +555,14 @@ py -m unittest test_enigma.py -v
 python3 -m unittest test_enigma.py -v
 ```
 
-### Test Coverage Highlights:
-- Media type detection (Image vs Music vs Binary Media).
-- Deterministic code generation from image bytes and audio bytes.
-- Single-key roundtrip encryption/decryption.
-- **Two-key cascade roundtrip** (combining Image + Music keys).
-- **Three-key cascade roundtrip**.
-- Multi-key syntax resolution (`1`, `1, 2`, `1 2`, direct paths).
-- Multiline newline preservation.
-- JSON storage persistence and key deletion.
+### Test Coverage Highlights (24 Tests Passing):
+- **Media Keys**: Media type detection (Image vs Music vs Binary Media), deterministic SHA-256 derivation.
+- **Multi-Rotor Cascades**: Single-key, 2-key (image + music), 3-key, and 4-key multi-cipher cascade roundtrips.
+- **Classical Ciphers**: Classical Random Monoalphabetic, Classical Vigenère (known test vectors), and repeating-key bitwise XOR.
+- **Syntax Flexibility**: Multi-key argument parsing with spaces (`1 2 3 4 5`), commas (`1, 2, 3`), continuous digits (`12345`), and quoted media filenames.
+- **Smart Bidirectional Decryption**: Verification of forward and reverse layer unwinding with deterministic XOR hex unpacking.
+- **Roundtrip Symmetry & Dissection**: Linked encryption/decryption execution verification and mathematical process dissection tables.
+- **Persistence & Management**: JSON storage serialization, key deletion, and metadata integrity.
 
 ---
 
