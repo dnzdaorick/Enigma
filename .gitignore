@@ -15,6 +15,12 @@ key_media/
 venv/
 env/
 
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
 # Editor / IDE configuration
 .vscode/
 .idea/
+
