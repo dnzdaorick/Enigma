@@ -2,11 +2,11 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![UI](https://img.shields.io/badge/Terminal_UI-Rich-magenta.svg?logo=terminal&logoColor=white)](https://github.com/Textualize/rich)
-[![Testing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg?logo=pytest&logoColor=white)](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/test_enigma.py)
+[![Testing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg?logo=pytest&logoColor=white)](test_enigma.py)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A minimal, multi-layer terminal cryptography suite implemented in Python. The application transforms **Image files** (PNG, JPG, BMP, etc.) and **Music/Audio files** (MP3, WAV, FLAC, etc.) into cryptographic code fingerprints, turning them into substitution keys. Users can encrypt messages and files using **1 key**, **combine both Image and Music keys**, or chain **2 or more keys in a sequential multi-rotor cascade pipeline**.
+A minimal, multi-layer terminal cryptography suite implemented in Python. The application transforms **Image files** (PNG, JPG, BMP, etc.) and **Music/Audio files** (MP3, WAV, FLAC, etc.) into cryptographic code fingerprints, turning them into substitution keys. Users can encrypt messages using **1 key**, **combine both Image and Music keys**, or chain **2 or more keys in a sequential multi-rotor cascade pipeline**.
 
 ---
 
@@ -24,7 +24,7 @@ A minimal, multi-layer terminal cryptography suite implemented in Python. The ap
   - [Module Breakdown](#module-breakdown)
 - [Cryptographic Mechanics & Complexity](#cryptographic-mechanics--complexity)
   - [Full 95-Character Printable Set](#full-95-character-printable-set)
-  - [Instant $O(1)$ Hash Map Lookups](#instant-o1-hash-map-lookups)
+  - [Instant O(1) Hash Map Lookups](#instant-o1-hash-map-lookups)
   - [Keyspace & Compounded Entropy](#keyspace--compounded-entropy)
 - [Installation & Quick Start](#installation--quick-start)
 - [Interactive CLI Walkthrough](#interactive-cli-walkthrough)
@@ -89,7 +89,7 @@ The 64-character SHA-256 code is converted into a 256-bit integer seed that init
 | **Lowercase Alphabet** | 26 | `abcdefghijklmnopqrstuvwxyz` |
 | **Uppercase Alphabet** | 26 | `ABCDEFGHIJKLMNOPQRSTUVWXYZ` |
 | **Numbers / Digits** | 10 | `0123456789` |
-| **Symbols & Space** | 33 | `!"#$%&'()*+,-./:;<=>?@[\]^_`{\|}~ ` |
+| **Symbols & Space** | 33 | ``!"#$%&'()*+,-./:;<=>?@[\]^_`{&#124;}~ `` *(plus space)* |
 | **Total Set** | **95** | Complete printable character space |
 
 Every character in the 95-character set is mapped **1-to-1** (bijective) to a substitute character. No character is ignored or skipped.
@@ -99,7 +99,7 @@ Every character in the 95-character set is mapped **1-to-1** (bijective) to a su
 You can choose to encrypt using:
 - **1 Key**: Single layer (e.g., Image Key #1).
 - **2 Keys (Combined Image + Music)**: Double layer (e.g., Key #1 + Key #2).
-- **3 or More Keys**: Triple or $N$-layer multi-rotor pipeline.
+- **3 or More Keys**: Triple or N-layer multi-rotor pipeline.
 
 When multiple keys are selected, the message passes through each key sequentially, exactly like electrical signals passing through the rotors of an Enigma machine:
 
@@ -162,31 +162,30 @@ The user simply enters the key combination (e.g., `1, 2`), and the program autom
 
 ```mermaid
 flowchart TD
-    User([User Terminal]) -->|Launch| Main[[main.py: CLI Entry Point]]
-    Main --> MenuModule[[menu_module.py: Interactive Menus]]
+    User(["User Terminal"]) -->|"Launch"| Main[["main.py: CLI Entry Point"]]
+    Main --> MenuModule[["menu_module.py: Interactive Menus"]]
     
-    MenuModule -->|Option A: Encrypt| EncryptFlow[Message Encryption]
-    MenuModule -->|Option B: Decrypt| DecryptFlow[Message Decryption]
-    MenuModule -->|Option C: Load/Gen Key| KeyGen[key_module.py: Image & Music Key Generator/Loader]
-    MenuModule -->|Option D: Inspect/Delete| KeyMgmt[key_module.py: Key Inspector & Storage]
-    MenuModule -->|Option X: Exit| ExitApp([Clean Exit])
+    MenuModule -->|"Option A: Encrypt"| EncryptFlow["Message Encryption"]
+    MenuModule -->|"Option B: Decrypt"| DecryptFlow["Message Decryption"]
+    MenuModule -->|"Option C: Generate Media Key"| KeyGen["key_module.py: Media Key Generator and Loader"]
+    MenuModule -->|"Option D: Manage and Inspect Keys"| KeyMgmt["key_module.py: Key Inspector and Storage"]
+    MenuModule -->|"Option X: Exit"| ExitApp(["Clean Exit"])
 
-    EncryptFlow --> KeySelect{Select 1, 2, or N Keys}
+    EncryptFlow --> KeySelect{"Select 1, 2, or N Keys"}
     DecryptFlow --> KeySelect
 
-
-    KeySelect -->|Key Store| KeyStore[(keys.json)]
-    KeySelect -->|Direct Media Files| MediaReader[media_cipher.py: read_media_bytes & media_to_code]
+    KeySelect -->|"Key Store"| KeyStore[("keys.json")]
+    KeySelect -->|"Direct Media Files"| MediaReader["media_cipher.py: read_media_bytes and media_to_code"]
     
-    MediaReader --> CipherEngine[[media_cipher.py: MultiKeyCipher]]
+    MediaReader --> CipherEngine[["media_cipher.py: MultiKeyCipher"]]
     KeyStore --> CipherEngine
     
-    CipherEngine -->|Layer 1: Key A| L1[Rotor Layer 1]
-    L1 -->|Layer 2: Key B| L2[Rotor Layer 2]
-    L2 -->|Layer N: Key N| LN[Rotor Layer N]
+    CipherEngine -->|"Layer 1: Key A"| L1["Rotor Layer 1"]
+    L1 -->|"Layer 2: Key B"| L2["Rotor Layer 2"]
+    L2 -->|"Layer N: Key N"| LN["Rotor Layer N"]
     
-    LN --> Results[Rich UI Pipeline Display]
-    LN --> Logs[(Encryption.txt / Decryption.txt)]
+    LN --> Results["Rich UI Pipeline Display"]
+    LN --> Logs[("Encryption.txt / Decryption.txt")]
 ```
 
 ### Repository Structure
@@ -202,7 +201,10 @@ Enigma Machine/
 ├── mesage_encryptor.py       # Cryptographic message data model with media metadata
 ├── test_enigma.py            # Automated unit test suite (unittest)
 ├── keys.json                 # Persistent key storage file (auto-generated)
-├── key_media/                # Directory for generated sample key images & music
+├── media/                    # Media assets used for key generation
+│   ├── audio/                # Audio files (e.g., Howling sound.mp3)
+│   └── images/               # Image files (e.g., crazy cat.jpg, orange cat.jpg)
+├── key_media/                # Directory for generated sample key images & music (auto-created)
 ├── Encryption.txt            # Audit log for encryption operations (auto-generated)
 ├── Decryption.txt            # Audit log for decryption operations (auto-generated)
 ├── requirements.txt          # Python dependencies (rich)
@@ -214,12 +216,12 @@ Enigma Machine/
 
 | Module | Primary Symbol / Class | Description |
 |---|---|---|
-| [main.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/main.py) | `main()`, `main_menu()` | Registers main menu options, dispatches user actions, and manages clean exit routines. |
-| [menu_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/menu_module.py) | [Menu](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/menu_module.py#L38-L82), `encrypt_menu()`, `decrypt_menu()`, `key_selection_menu()` | Coordinates user prompts, validates single and multi-key inputs, and runs animated progress bars. |
-| [key_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/key_module.py) | `register_media_file()`, `generate_sample_image()`, `generate_sample_music()`, `parse_and_resolve_keys()` | Manages Image and Music keys, persists metadata in `keys.json`, and parses multi-key arguments. |
-| [media_cipher.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/media_cipher.py) | [MultiKeyCipher](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/media_cipher.py#L182-L290), `create_sample_bmp_image()`, `create_sample_wav_music()` | Converts image and audio files into cryptographic codes, executes multi-layer cascade substitution, and logs results. |
-| [utilities_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/utilities_module.py) | `clear_screen()`, `progress_bar()`, `display_header()`, `prompt_delay()` | Terminal clearing, animated progress bars, and standardized visual banners. |
-| [test_enigma.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/test_enigma.py) | `TestMediaCipher`, `TestKeyModule`, `TestMenuModule` | 12 automated unit tests validating single-key, double-key (image + music), triple-key roundtrips, and persistence. |
+| [main.py](main.py) | `main()`, `main_menu()` | Registers main menu options, dispatches user actions, and manages clean exit routines. |
+| [menu_module.py](menu_module.py) | [`Menu`](menu_module.py), `encrypt_menu()`, `decrypt_menu()`, `key_selection_menu()` | Coordinates user prompts, validates single and multi-key inputs, and runs animated progress bars. |
+| [key_module.py](key_module.py) | `register_media_file()`, `generate_sample_image()`, `generate_sample_music()`, `parse_and_resolve_keys()` | Manages Image and Music keys, persists metadata in `keys.json`, and parses multi-key arguments. |
+| [media_cipher.py](media_cipher.py) | [`MultiKeyCipher`](media_cipher.py), `create_sample_bmp_image()`, `create_sample_wav_music()` | Converts image and audio files into cryptographic codes, executes multi-layer cascade substitution, and logs results. |
+| [utilities_module.py](utilities_module.py) | `clear_screen()`, `progress_bar()`, `display_header()`, `prompt_delay()` | Terminal clearing, animated progress bars, and standardized visual banners. |
+| [test_enigma.py](test_enigma.py) | `TestMediaCipher`, `TestKeyModule`, `TestMenuModule` | 14 automated unit tests validating single-key, double-key (image + music), triple-key roundtrips, and persistence. |
 
 ---
 
@@ -230,11 +232,11 @@ Enigma Machine/
 The cipher maps every printable ASCII character (codes 32 to 126 inclusive):
 - **Alphabet**: `a-z` (26) and `A-Z` (26)
 - **Numbers**: `0-9` (10)
-- **Symbols**: `!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ` (33)
+- **Symbols & Space**: ``!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ `` (33 characters including space)
 
 Characters outside this set (such as multiline newlines `\n` and tabs `\t`) are preserved, ensuring formatted files and paragraphs retain their structure while all text content is thoroughly scrambled.
 
-### Instant $O(1)$ Hash Map Lookups
+### Instant O(1) Hash Map Lookups
 
 Every key layer precomputes an inverse dictionary mapping upon initialization:
 
@@ -242,20 +244,26 @@ Every key layer precomputes an inverse dictionary mapping upon initialization:
 self.inverse_key = {v: k for k, v in self.key.items()}
 ```
 
-- **Per-Character Lookup**: $O(1)$ time complexity.
-- **Single-Layer Execution**: $O(N)$ where $N$ is the message length.
-- **$M$-Layer Multi-Key Cascade**: $O(M \cdot N)$ total time across $M$ keys.
+- **Per-Character Lookup**: `O(1)` time complexity.
+- **Single-Layer Execution**: `O(N)` where `N` is the message length.
+- **M-Layer Multi-Key Cascade**: `O(M × N)` total time across `M` keys.
 
 ### Keyspace & Compounded Entropy
 
 For a single key layer over 95 characters:
-$$\text{Keyspace}_1 = 95! \approx 1.0329 \times 10^{148}$$
+```math
+\text{Keyspace}_1 = 95! \approx 1.0329 \times 10^{148}
+```
 
 When combining $M$ independent media keys in a cascade:
-$$\text{Compounded Permutation States} \approx (95!)^M$$
+```math
+\text{Compounded Permutation States} \approx (95!)^M
+```
 
 For a 2-key combination (Image + Music):
-$$(95!)^2 \approx 1.067 \times 10^{296}$$
+```math
+(95!)^2 \approx 1.067 \times 10^{296}
+```
 
 ---
 
@@ -263,8 +271,8 @@ $$(95!)^2 \approx 1.067 \times 10^{296}$$
 
 1. **Clone or Download the Repository**:
    ```bash
-   git clone https://github.com/your-username/enigma-machine.git
-   cd "Enigma Machine"
+   git clone https://github.com/dnzdaorick/Enigma-Machine.git
+   cd "Enigma-Machine"
    ```
 
 2. **Install Dependencies**:
@@ -345,7 +353,7 @@ Select option **`C`** to generate a key from your media folder (`media/audio` an
    ╭───────────────────────── Available Media Files ─────────────────────────╮
    │  #   │   Type   │ File Name         │ Folder        │        Size       │
    ├──────┼──────────┼───────────────────┼───────────────┼───────────────────┤
-   │  1   │ 🎵 Audio │ default_audio.wav │ media/audio   │         172.3 KB  │
+   │  1   │ 🎵 Audio │ Howling sound.mp3 │ media/audio   │         396.6 KB  │
    │  2   │ 🖼️ Image │ crazy cat.jpg     │ media/images  │           3.5 KB  │
    │  3   │ 🖼️ Image │ orange cat.jpg    │ media/images  │          13.5 KB  │
    ╰──────┴──────────┴───────────────────┴───────────────┴───────────────────╯
@@ -456,7 +464,7 @@ python3 -m unittest test_enigma.py -v
 This application implements a **Multi-Key Media Substitution Cipher**, designed for educational, demonstration, and personal text processing purposes.
 
 > [!NOTE]
-> Combining multiple media keys (Image + Music) significantly increases complexity through multi-rotor cascade layering ($(95!)^M$). However, substitution ciphers remain distinguishable under statistical language frequency analysis when encrypting very large texts. For military or high-security production environments, use modern authenticated block ciphers like AES-256-GCM.
+> Combining multiple media keys (Image + Music) significantly increases complexity through multi-rotor cascade layering ((95!)^M states). However, substitution ciphers remain distinguishable under statistical language frequency analysis when encrypting very large texts. For military or high-security production environments, use modern authenticated block ciphers like AES-256-GCM.
 
 ---
 
