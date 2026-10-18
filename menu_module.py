@@ -1,7 +1,7 @@
 """Menu module for Enigma.
 
 Minimal, polished command-line interface for message encryption, decryption,
-file cryptography, and media key management.
+and media key management.
 """
 
 import os
@@ -249,67 +249,6 @@ def key_management_menu() -> None:
         elif choice == "4":
             clear_screen()
             break
-
-
-def file_cipher_menu() -> None:
-    """Encrypts or decrypts text files on disk using 1 or more media keys."""
-    display_header("ENIGMA", "File Cryptography")
-    action = Prompt.ask("Select operation", choices=["encrypt", "decrypt", "back"], default="encrypt")
-    if action == "back":
-        return
-
-    source_path = input("Enter path to source text file: ").strip().strip('"').strip("'")
-    if not os.path.exists(source_path):
-        console.print(f"[bold red]Error: File '{source_path}' does not exist.[/bold red]")
-        prompt_delay()
-        return
-
-    default_dest = f"{os.path.splitext(source_path)[0]}_{action}ed.txt"
-    dest_path = input(f"Enter destination file path [{default_dest}]: ").strip().strip('"').strip("'")
-    if not dest_path:
-        dest_path = default_dest
-
-    selection = key_selection_menu()
-    if not selection:
-        return
-
-    key_desc = " + ".join(f"#{k_id}" for k_id, _, _ in selection)
-
-    try:
-        with open(source_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        progress_bar(
-            message=f"{action.capitalize()}ing file ({key_desc})...",
-            total=6,
-            step_delay=0.03,
-        )
-
-        cipher = MultiKeyCipher(
-            message=content,
-            key_layers=selection,
-            show_ui=False,
-        )
-        result = cipher.encrypt() if action == "encrypt" else cipher.decrypt()
-
-        with open(dest_path, "w", encoding="utf-8") as f:
-            f.write(result)
-
-        console.print(
-            Panel(
-                f"[bold green]Operation complete![/bold green]\n"
-                f"Source: [cyan]{source_path}[/cyan]\n"
-                f"Destination: [cyan]{dest_path}[/cyan]\n"
-                f"Key(s) Used: [yellow]{key_desc}[/yellow] ({len(selection)} layer{'s' if len(selection) > 1 else ''})",
-                title="File Result",
-                border_style="green",
-            )
-        )
-    except Exception as e:
-        console.print(f"[bold red]Error during file processing: {e}[/bold red]")
-
-    prompt_delay()
-    clear_screen()
 
 
 menu_options: list[Menu] = []

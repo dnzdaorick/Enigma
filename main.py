@@ -9,7 +9,6 @@ from menu_module import (
     decrypt_menu,
     generate_media_key_menu,
     key_management_menu,
-    file_cipher_menu,
 )
 
 console = Console()
@@ -19,7 +18,6 @@ ACTION_DISPATCH = {
     "B": decrypt_menu,
     "C": generate_media_key_menu,
     "D": key_management_menu,
-    "E": file_cipher_menu,
 }
 
 
@@ -64,7 +62,6 @@ def main() -> None:
     Menu("B", "Decrypt Message", "bold yellow").add_option()
     Menu("C", "Generate Media Key", "bold blue").add_option()
     Menu("D", "Manage & Inspect Keys", "bold magenta").add_option()
-    Menu("E", "File Cryptography (.txt)", "bold cyan").add_option()
     Menu("X", "Exit Program", "bold red").add_option()
 
     main_menu()

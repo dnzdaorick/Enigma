@@ -33,7 +33,6 @@ A minimal, multi-layer terminal cryptography suite implemented in Python. The ap
   - [Option B: Decrypt Message](#option-b-decrypt-message)
   - [Option C: Generate Media Key](#option-c-generate-media-key)
   - [Option D: Manage & Inspect Keys](#option-d-manage--inspect-keys)
-  - [Option E: File Cryptography (.txt Documents)](#option-e-file-cryptography-txt-documents)
 - [Key Storage & JSON Persistence](#key-storage--json-persistence)
 - [Audit Logging System](#audit-logging-system)
 - [Automated Unit Testing](#automated-unit-testing)
@@ -170,12 +169,11 @@ flowchart TD
     MenuModule -->|Option B: Decrypt| DecryptFlow[Message Decryption]
     MenuModule -->|Option C: Load/Gen Key| KeyGen[key_module.py: Image & Music Key Generator/Loader]
     MenuModule -->|Option D: Inspect/Delete| KeyMgmt[key_module.py: Key Inspector & Storage]
-    MenuModule -->|Option E: File Cipher| FileFlow[File Cryptography]
     MenuModule -->|Option X: Exit| ExitApp([Clean Exit])
 
     EncryptFlow --> KeySelect{Select 1, 2, or N Keys}
     DecryptFlow --> KeySelect
-    FileFlow --> KeySelect
+
 
     KeySelect -->|Key Store| KeyStore[(keys.json)]
     KeySelect -->|Direct Media Files| MediaReader[media_cipher.py: read_media_bytes & media_to_code]
@@ -297,7 +295,6 @@ $$(95!)^2 \approx 1.067 \times 10^{296}$$
 [B] - Decrypt Message
 [C] - Generate Media Key
 [D] - Manage & Inspect Keys
-[E] - File Cryptography (.txt)
 [X] - Exit Program
 
 Enter option:
@@ -372,17 +369,6 @@ Select option **`D`** to manage stored keys:
 - **Show All Keys**: Lists all enrolled keys with icons (🖼️ Image / 🎵 Music), filenames, SHA-256 codes, and timestamps.
 - **Inspect Key Mapping**: Displays full 64-character SHA-256 code, file size, and complete character substitution tables (Alphabet, Numbers, Symbols).
 - **Delete Key**: Permanently deletes a key from active memory and updates `keys.json`.
-
----
-
-### Option E: File Cryptography (.txt Documents)
-
-Encrypt or decrypt text files on disk:
-1. Choose operation (`encrypt` or `decrypt`).
-2. Enter the source text file path.
-3. Enter destination file path (defaults to `<name>_encrypted.txt`).
-4. Select 1 or multiple keys (e.g. `1, 2` to combine Image + Music).
-5. The file is encrypted/decrypted and saved to disk.
 
 ---
 
