@@ -53,9 +53,13 @@ def read_media_bytes(file_path: str) -> bytes:
 
 def media_to_code(media_bytes: bytes, file_path: str = "") -> dict[str, str]:
     """Converts media binary data into cryptographic codes and fingerprints."""
+    # 1. Compute SHA-256 (64 hex characters) as the primary unique file fingerprint
     sha256_hash = hashlib.sha256(media_bytes).hexdigest()
+    # 2. Compute SHA-512 (128 hex characters) for extended verification
     sha512_hash = hashlib.sha512(media_bytes).hexdigest()
+    # 3. Take the first 16 characters as a short display code for terminal UI & tables
     short_code = sha256_hash[:16].upper()
+    # 4. Identify media type ('image', 'music', or 'media') based on file extension
     media_type = detect_media_type(file_path) if file_path else "media"
     return {
         "sha256": sha256_hash,
@@ -74,16 +78,22 @@ def generate_key_from_bytes(
     Returns:
         (substitution_key, inverse_key, code_info)
     """
+    # 1. Get metadata and cryptographic hash fingerprint
     code_info = media_to_code(media_bytes, file_path)
+    # 2. Convert 32-byte (256-bit) raw SHA-256 digest into an integer seed
     seed_int = int.from_bytes(hashlib.sha256(media_bytes).digest(), "big")
     
+    # 3. Initialize an isolated random generator (same file always produces identical shuffle)
     rng = random.Random(seed_int)
+    # 4. Deterministically shuffle all 95 printable ASCII characters
     shuffled_charset = FULL_CHARSET.copy()
     rng.shuffle(shuffled_charset)
 
+    # 5. Build 1-to-1 encryption mapping: original char -> substitute char
     substitution_key = {
         orig: subst for orig, subst in zip(FULL_CHARSET, shuffled_charset)
     }
+    # 6. Build reverse decryption mapping: substitute char -> original char (O(1) lookup)
     inverse_key = {
         subst: orig for orig, subst in substitution_key.items()
     }
@@ -91,7 +101,7 @@ def generate_key_from_bytes(
     return substitution_key, inverse_key, code_info
 
 
-# Backward-compatible alias
+# Backward-compatible aliases for legacy image-only calls
 generate_key_from_image = generate_key_from_bytes
 read_image_bytes = read_media_bytes
 image_to_code = media_to_code
