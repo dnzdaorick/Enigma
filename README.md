@@ -2,7 +2,9 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![UI](https://img.shields.io/badge/Terminal_UI-Rich-magenta.svg?logo=terminal&logoColor=white)](https://github.com/Textualize/rich)
-[![Testing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg?logo=pytest&logoColor=white)](test_enigma.py)
+[![Testing](https://img.shields.io/badge/Tests-24%20Passing-brightgreen.svg?logo=pytest&logoColor=white)](test_enigma.py)
+[![Release](https://img.shields.io/github/v/release/dnzdaorick/Enigma?color=orange&logo=github)](https://github.com/dnzdaorick/Enigma/releases/latest)
+[![Download](https://img.shields.io/badge/Download-Enigma.exe-success?logo=windows&logoColor=white)](https://github.com/dnzdaorick/Enigma/releases/download/v1.0.0/Enigma.exe)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -323,10 +325,19 @@ For a 2-key combination (Image + Music):
 
 ## Installation & Quick Start
 
-1. **Clone or Download the Repository**:
+### Option 1: Direct Download (Windows Standalone Executable)
+No Python installation or dependencies required:
+1. Download **[Enigma.exe](https://github.com/dnzdaorick/Enigma/releases/download/v1.0.0/Enigma.exe)** from the latest [GitHub Release](https://github.com/dnzdaorick/Enigma/releases/tag/v1.0.0).
+2. Run `Enigma.exe` directly in your terminal or double-click to launch!
+
+---
+
+### Option 2: Run from Source (Python 3.10+)
+
+1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/dnzdaorick/Enigma-Machine.git
-   cd "Enigma-Machine"
+   git clone https://github.com/dnzdaorick/Enigma.git
+   cd "Enigma"
    ```
 
 2. **Install Dependencies**:
@@ -339,6 +350,11 @@ For a 2-key combination (Image + Music):
    ```bash
    py main.py          # Windows
    python3 main.py     # macOS / Linux
+   ```
+
+4. **Build Your Own `.exe` (Optional)**:
+   ```bash
+   py -m PyInstaller --onefile --name "Enigma" --add-data "media;media" main.py
    ```
 
 ---
