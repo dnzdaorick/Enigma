@@ -7,17 +7,17 @@ from menu_module import (
     menu_options,
     encrypt_menu,
     decrypt_menu,
+    load_or_generate_image_key_menu,
     key_management_menu,
     file_cipher_menu,
 )
-from key_module import generate_key
 
 console = Console()
 
 ACTION_DISPATCH = {
     "A": encrypt_menu,
     "B": decrypt_menu,
-    "C": generate_key,
+    "C": load_or_generate_image_key_menu,
     "D": key_management_menu,
     "E": file_cipher_menu,
 }
@@ -46,7 +46,7 @@ def main_menu() -> None:
         try:
             utilities_module.display_header(
                 "ENIGMA MACHINE",
-                "Cryptographic Operations & Key Management",
+                "Image Key Cryptography (Alphabet, Numbers & Symbols)",
             )
             Menu.show_all_options()
             console.print()
@@ -62,8 +62,8 @@ def main() -> None:
     """Initializes menu options and launches the main application loop."""
     Menu("A", "Encrypt Message", "bold green").add_option()
     Menu("B", "Decrypt Message", "bold yellow").add_option()
-    Menu("C", "Generate Substitution Key", "bold blue").add_option()
-    Menu("D", "Manage & Inspect Keys", "bold magenta").add_option()
+    Menu("C", "Load / Generate Image Key", "bold blue").add_option()
+    Menu("D", "Manage & Inspect Image Keys", "bold magenta").add_option()
     Menu("E", "File Cryptography (Encrypt/Decrypt .txt)", "bold cyan").add_option()
     Menu("X", "Exit Program", "bold red").add_option()
 

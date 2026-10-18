@@ -7,6 +7,7 @@ __pycache__/
 Encryption.txt
 Decryption.txt
 keys.json
+key_images/
 
 # Virtual environments
 .venv/
