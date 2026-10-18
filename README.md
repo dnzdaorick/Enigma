@@ -1,4 +1,4 @@
-# Enigma Machine
+# Enigma
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![UI](https://img.shields.io/badge/Terminal_UI-Rich-magenta.svg?logo=terminal&logoColor=white)](https://github.com/Textualize/rich)
@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A modern, multi-layer terminal cryptography suite implemented in Python. The application transforms **Image files** (PNG, JPG, BMP, etc.) and **Music/Audio files** (MP3, WAV, FLAC, etc.) into cryptographic code fingerprints, turning them into substitution keys. Users can encrypt messages and files using **1 key**, **combine both Image and Music keys**, or chain **2 or more keys in a sequential multi-rotor cascade pipeline**.
+A minimal, multi-layer terminal cryptography suite implemented in Python. The application transforms **Image files** (PNG, JPG, BMP, etc.) and **Music/Audio files** (MP3, WAV, FLAC, etc.) into cryptographic code fingerprints, turning them into substitution keys. Users can encrypt messages and files using **1 key**, **combine both Image and Music keys**, or chain **2 or more keys in a sequential multi-rotor cascade pipeline**.
 
 ---
 
@@ -29,9 +29,9 @@ A modern, multi-layer terminal cryptography suite implemented in Python. The app
 - [Installation & Quick Start](#installation--quick-start)
 - [Interactive CLI Walkthrough](#interactive-cli-walkthrough)
   - [Main Menu Navigation](#main-menu-navigation)
-  - [Option A: Encrypt Message (Single or Multi-Key)](#option-a-encrypt-message-single-or-multi-key)
-  - [Option B: Decrypt Message (Single or Multi-Key)](#option-b-decrypt-message-single-or-multi-key)
-  - [Option C: Load / Generate Media Key (Image / Music)](#option-c-load--generate-media-key-image--music)
+  - [Option A: Encrypt Message](#option-a-encrypt-message)
+  - [Option B: Decrypt Message](#option-b-decrypt-message)
+  - [Option C: Generate Media Key](#option-c-generate-media-key)
   - [Option D: Manage & Inspect Keys](#option-d-manage--inspect-keys)
   - [Option E: File Cryptography (.txt Documents)](#option-e-file-cryptography-txt-documents)
 - [Key Storage & JSON Persistence](#key-storage--json-persistence)
@@ -43,7 +43,7 @@ A modern, multi-layer terminal cryptography suite implemented in Python. The app
 
 ## Overview
 
-Traditional substitution ciphers rely on manually configured alphabets or pseudo-random letter shuffles. **Enigma Machine** takes inspiration from physical multi-rotor encryption (such as the historic Enigma machine) and combines it with modern media hashing:
+Traditional substitution ciphers rely on manually configured alphabets or pseudo-random letter shuffles. **Enigma** takes inspiration from physical multi-rotor encryption (such as the historic Enigma machine) and combines it with modern media hashing:
 
 1. **Any Media as a Key**: Point the program to any image file or music/sound file.
 2. **Turn Media into Code**: The program converts the file's raw binary data into a cryptographic **SHA-256 fingerprint**.
@@ -289,47 +289,47 @@ $$(95!)^2 \approx 1.067 \times 10^{296}$$
 
 ```text
 ╭──────────────────────────────────────────────────╮
-│                  ENIGMA MACHINE                  │
-│ Multi-Key Media Cryptography (Image + Music)     │
+│                      ENIGMA                      │
+│            Cryptographic Media Engine            │
 ╰──────────────────────────────────────────────────╯
 
-[A] - Encrypt Message (1, 2, or Multiple Keys)
-[B] - Decrypt Message (1, 2, or Multiple Keys)
-[C] - Load / Generate Media Key (Image / Music)
+[A] - Encrypt Message
+[B] - Decrypt Message
+[C] - Generate Media Key
 [D] - Manage & Inspect Keys
-[E] - File Cryptography (Encrypt/Decrypt .txt)
+[E] - File Cryptography (.txt)
 [X] - Exit Program
 
-Enter the code of the option you want to select:
+Enter option:
 ```
 
 ---
 
-### Option A: Encrypt Message (Single or Multi-Key)
+### Option A: Encrypt Message
 
 1. Select option **`A`**.
-2. Type the message to encrypt (can include letters, numbers, symbols, spaces):
+2. Type the message to encrypt:
    ```text
-   Enter the message to encrypt: Top Secret 2026: Project Enigma [Launch Code #99!]
+   Enter message to encrypt: Top Secret 2026: Project Enigma [Launch Code #99!]
    ```
 3. A table of available keys is displayed. You can:
    - **Use 1 key**: Type `1`
-   - **Combine 2 keys (Image + Music)**: Type `1, 2`
+   - **Combine 2 keys**: Type `1, 2` (e.g. 1, 2 to combine keys)
    - **Combine 3 or more keys**: Type `1, 2, 3`
    - **Use direct files**: Type `photo.png, song.mp3`
 4. An animated progress bar simulates cipher execution:
    ```text
-   Encrypting through 2 layers (#1 (image) + #2 (music))... ━━━━━━━━━━ 100% 0.2s
+   Encrypting (#1 + #2)... ━━━━━━━━━━ 100% 0.2s
    ```
 5. A stylized **ENCRYPTION RESULT** card appears, displaying:
    - The input string.
    - The final encrypted ciphertext.
-   - A **Multi-Stage Pipeline Table** showing each key layer, media icon, file name, and SHA-256 fingerprint.
+   - A clean **Pipeline Table** showing each key stage, media icon, file name, and SHA-256 fingerprint.
 6. The operation is logged to `Encryption.txt`.
 
 ---
 
-### Option B: Decrypt Message (Single or Multi-Key)
+### Option B: Decrypt Message
 
 1. Select option **`B`**.
 2. Enter or paste the ciphertext.
@@ -339,29 +339,38 @@ Enter the code of the option you want to select:
 
 ---
 
-### Option C: Load / Generate Media Key (Image / Music)
+### Option C: Generate Media Key
 
-Select option **`C`** to access the media key generation and enrollment menu:
+Select option **`C`** to generate a key from your media folder (`media/audio` and `media/images`):
 
-```text
-[1] Generate Sample Key Image (.bmp)
-[2] Generate Sample Key Music (.wav)
-[3] Load Existing Image File (PNG, JPG, BMP, etc.)
-[4] Load Existing Music File (MP3, WAV, OGG, FLAC, etc.)
-[5] Return to Main Menu
-```
-
-- **Generate Sample Key Image**: Synthesizes a valid 24-bit colorful `.bmp` image in `key_media/key_image_<id>.bmp` using pure Python.
-- **Generate Sample Key Music**: Synthesizes a valid 16-bit 44.1kHz musical arpeggio `.wav` audio file in `key_media/key_music_<id>.wav`.
-- **Load Existing File**: Specify the path to any existing image or audio track on your computer.
+1. Scans `media/` and automatically lists all available media files:
+   ```text
+   ╭───────────────────────── Available Media Files ─────────────────────────╮
+   │  #   │   Type   │ File Name         │ Folder        │        Size       │
+   ├──────┼──────────┼───────────────────┼───────────────┼───────────────────┤
+   │  1   │ 🎵 Audio │ default_audio.wav │ media/audio   │         172.3 KB  │
+   │  2   │ 🖼️ Image │ crazy cat.jpg     │ media/images  │           3.5 KB  │
+   │  3   │ 🖼️ Image │ orange cat.jpg    │ media/images  │          13.5 KB  │
+   ╰──────┴──────────┴───────────────────┴───────────────┴───────────────────╯
+   ```
+2. Enter a number to select a file (e.g. `1` for default audio, `2` for an image, or `1, 2` for multiple), OR type a custom file path directly.
+3. Automatically computes the SHA-256 fingerprint, derives the 95-character substitution key, and registers it in `keys.json`.
 
 ---
 
 ### Option D: Manage & Inspect Keys
 
 Select option **`D`** to manage stored keys:
-- **Show All Keys Overview**: Lists all enrolled keys with icons (🖼️ Image / 🎵 Music), filenames, SHA-256 codes, and timestamps.
-- **Detailed Inspector**: Displays full 64-character SHA-256 code, file size, and complete character substitution tables (Alphabet, Numbers, Symbols).
+
+```text
+[1] Show All Keys
+[2] Inspect Key Mapping
+[3] Delete a Key
+[4] Return to Main Menu
+```
+
+- **Show All Keys**: Lists all enrolled keys with icons (🖼️ Image / 🎵 Music), filenames, SHA-256 codes, and timestamps.
+- **Inspect Key Mapping**: Displays full 64-character SHA-256 code, file size, and complete character substitution tables (Alphabet, Numbers, Symbols).
 - **Delete Key**: Permanently deletes a key from active memory and updates `keys.json`.
 
 ---

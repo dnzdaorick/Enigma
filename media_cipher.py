@@ -247,18 +247,16 @@ class MultiKeyCipher:
     def _display_results(
         self, operation: str, input_text: str, result_text: str, layer_logs: list[dict[str, str]]
     ) -> None:
-        """Renders styled multi-stage pipeline cards and mapping sample previews."""
+        """Renders styled pipeline cards and mapping details."""
         num_keys = len(self.key_layers)
-        type_summary = " + ".join(meta.get("media_type", "Key").title() for _, _, meta in self.key_layers)
 
         content = (
-            f"[bold cyan]Input:[/bold cyan] {input_text}\n"
-            f"[bold green]Result:[/bold green] {result_text}\n\n"
-            f"[bold magenta]Key Count:[/bold magenta] {num_keys} Key(s) [dim]({type_summary})[/dim]\n"
+            f"[bold cyan]Input:[/bold cyan]  {input_text}\n"
+            f"[bold green]Result:[/bold green] {result_text}\n"
         )
 
         pipeline_table = Table(
-            title=f"{operation} Pipeline Stages ({num_keys} Key Layer{'s' if num_keys > 1 else ''})",
+            title=f"Pipeline ({num_keys} Key{'s' if num_keys > 1 else ''})",
             show_header=True,
             header_style="bold cyan",
             box=box.ROUNDED,
@@ -267,7 +265,7 @@ class MultiKeyCipher:
         pipeline_table.add_column("Key #", style="bold white", justify="center", width=8)
         pipeline_table.add_column("Type", style="cyan", justify="center", width=10)
         pipeline_table.add_column("Source File", style="green", justify="left")
-        pipeline_table.add_column("Code Fingerprint (SHA-256)", style="dim", justify="left")
+        pipeline_table.add_column("SHA-256 Code", style="dim", justify="left")
 
         for log in layer_logs:
             m_type = log["media_type"].lower()
@@ -285,7 +283,7 @@ class MultiKeyCipher:
         console.print(
             Panel(
                 content,
-                title=f"[bold white]{operation.upper()} RESULT (MULTI-KEY MEDIA CIPHER)[/bold white]",
+                title=f"[bold white]{operation.upper()} RESULT[/bold white]",
                 border_style="bright_blue",
             )
         )

@@ -191,6 +191,32 @@ class TestKeyModule(unittest.TestCase):
         self.assertTrue(key_module.delete_key("999"))
         self.assertNotIn("999", key_module.keys)
 
+    def test_scan_media_folder_and_default_audio(self):
+        tmp_media = os.path.join(self.tmp_dir.name, "media")
+        os.makedirs(os.path.join(tmp_media, "images"), exist_ok=True)
+        sample_img = os.path.join(tmp_media, "images", "cat.png")
+        create_sample_bmp_image(sample_img, width=16, height=16)
+
+        # Scans media folder; should automatically ensure default_audio.wav exists
+        files = key_module.scan_media_folder(tmp_media)
+        self.assertGreaterEqual(len(files), 2)
+        # Audio should be prioritized first (#1)
+        self.assertTrue(any("default_audio.wav" in f for f in files))
+        self.assertTrue(any("cat.png" in f for f in files))
+
+    def test_resolve_media_input(self):
+        sample_files = ["media/audio/default_audio.wav", "media/images/photo.png"]
+        # Numeric index selection
+        res1 = key_module.resolve_media_input("1", sample_files)
+        self.assertEqual(res1, ["media/audio/default_audio.wav"])
+
+        res2 = key_module.resolve_media_input("1, 2", sample_files)
+        self.assertEqual(res2, sample_files)
+
+        # Out of bounds
+        invalid = key_module.resolve_media_input("99", sample_files)
+        self.assertIsNone(invalid)
+
 
 class TestMenuModule(unittest.TestCase):
     """Test suite for menu options and verification."""

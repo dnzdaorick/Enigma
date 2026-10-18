@@ -1,7 +1,7 @@
-"""Menu module for Enigma Machine.
+"""Menu module for Enigma.
 
-Interactive command-line interface for message encryption, decryption,
-file cryptography, and multi-key (image + music) management.
+Minimal, polished command-line interface for message encryption, decryption,
+file cryptography, and media key management.
 """
 
 import os
@@ -18,13 +18,13 @@ from utilities_module import (
 from key_module import (
     show_all_keys,
     select_key,
-    generate_sample_image,
-    generate_sample_music,
-    generate_key,
     inspect_key,
     delete_key,
     register_media_file,
     parse_and_resolve_keys,
+    scan_media_folder,
+    display_media_folder_table,
+    resolve_media_input,
     get_key_meta,
     keys,
     keys_metadata,
@@ -60,13 +60,13 @@ class Menu:
     def get_user_code() -> str:
         """Gets and validates user input for menu selection."""
         user_code: str = input(
-            "Enter the code of the option you want to select: "
+            "Enter option: "
         ).strip().upper()
 
         verified: str = Menu.verify_user_code(user_code)
         if verified == "code not found":
             console.print(
-                "[bold red]Code not found! Please enter a valid code.[/bold red]"
+                "[bold red]Option not found. Please enter a valid code.[/bold red]"
             )
             delay_and_clear_screen()
         return verified
@@ -81,52 +81,36 @@ class Menu:
 
 
 def key_selection_menu() -> list[tuple[str, dict[str, str], dict[str, str]]] | None:
-    """Prompts the user to select 1, 2, or more keys (by ID or file paths).
-    
-    Returns:
-        List of (key_identifier, key_mapping, metadata_dict) or None if cancelled.
-    """
+    """Prompts the user to select 1, 2, or more keys by ID or file path."""
     if not keys:
         console.print(
             Panel(
-                "[bold yellow]No cryptographic keys registered yet![/bold yellow]\n"
-                "Please generate a sample key (image or music) or load an existing file.",
+                "[bold yellow]No keys available yet.[/bold yellow]\n"
+                "Select a media file below to generate your first key.",
                 border_style="yellow",
                 title="Notice",
             )
         )
-        choice = Prompt.ask(
-            "Choose an option: [1] Generate Image Key, [2] Generate Music Key, [3] Load File, [C]ancel",
-            choices=["1", "2", "3", "c"],
-            default="1",
-        ).lower()
+        available_files = scan_media_folder()
+        display_media_folder_table(available_files)
+        console.print("\n[dim]Choose by number (e.g. 1, or 1, 2), or enter a custom file path, or 'c' to cancel.[/dim]")
+        user_input = input("Select Media: ").strip()
+        if user_input.lower() in ("c", "cancel", "q", ""):
+            return None
 
-        if choice == "1":
-            generate_sample_image()
-            return key_selection_menu()
-        elif choice == "2":
-            generate_sample_music()
-            return key_selection_menu()
-        elif choice == "3":
-            file_path = input("Enter path to image or music file: ").strip().strip('"').strip("'")
-            if not file_path:
-                return None
-            reg = register_media_file(file_path)
-            if reg:
-                return key_selection_menu()
+        selected_paths = resolve_media_input(user_input, available_files)
+        if not selected_paths:
+            prompt_delay()
             return None
-        else:
-            return None
+
+        for path in selected_paths:
+            register_media_file(path, interactive=False)
+
+        return key_selection_menu()
 
     show_all_keys()
-    console.print(
-        "\n[bold cyan]Key Selection Options:[/bold cyan]\n"
-        "  • Single key: Enter one Key # (e.g. [yellow]1[/yellow])\n"
-        "  • Combine 2 or more keys: Enter comma-separated IDs (e.g. [yellow]1, 2[/yellow] to combine Image + Music)\n"
-        "  • Direct files: Enter paths directly (e.g. [green]my_photo.png, song.mp3[/green])\n"
-        "  • Cancel: Type [dim]'c'[/dim] to return\n"
-    )
-    user_input = input("Enter Key Selection: ").strip()
+    console.print("[dim]Enter Key # (e.g. 1, or 1, 2 to combine keys), file path, or 'c' to cancel.[/dim]")
+    user_input = input("Select Key(s): ").strip()
 
     if user_input.lower() in ("c", "cancel", "q", "quit", ""):
         console.print("[dim]Operation cancelled.[/dim]")
@@ -142,11 +126,11 @@ def key_selection_menu() -> list[tuple[str, dict[str, str], dict[str, str]]] | N
 
 
 def encrypt_menu() -> None:
-    """Displays the interactive message encryption interface (1, 2, or more keys)."""
-    display_header("Message Encryption", "Multi-Key Media Cipher (Image + Music + Multi-Layer)")
-    message = input("Enter the message to encrypt: ")
+    """Displays the interactive message encryption interface."""
+    display_header("ENIGMA", "Encrypt Message")
+    message = input("Enter message to encrypt: ")
     if not message:
-        console.print("[yellow]Empty message entered. Returning to menu.[/yellow]")
+        console.print("[yellow]Empty message entered.[/yellow]")
         prompt_delay()
         return
 
@@ -154,11 +138,11 @@ def encrypt_menu() -> None:
 
 
 def decrypt_menu() -> None:
-    """Displays the interactive message decryption interface (1, 2, or more keys)."""
-    display_header("Message Decryption", "Multi-Key Media Cipher (Image + Music + Multi-Layer)")
-    encrypted_message = input("Enter the encrypted message to decrypt: ")
+    """Displays the interactive message decryption interface."""
+    display_header("ENIGMA", "Decrypt Message")
+    encrypted_message = input("Enter ciphertext to decrypt: ")
     if not encrypted_message:
-        console.print("[yellow]Empty message entered. Returning to menu.[/yellow]")
+        console.print("[yellow]Empty message entered.[/yellow]")
         prompt_delay()
         return
 
@@ -166,19 +150,19 @@ def decrypt_menu() -> None:
 
 
 def perform_cipher_operation(message: str, operation: str) -> None:
-    """Executes multi-key encryption or decryption with visual pipeline feedback."""
+    """Executes multi-key encryption or decryption with visual feedback."""
     selection = key_selection_menu()
     if not selection:
         clear_screen()
         return
 
     num_layers = len(selection)
-    layer_names = [f"#{k_id} ({meta.get('media_type', 'media')})" for k_id, _, meta in selection]
+    layer_names = [f"#{k_id}" for k_id, _, _ in selection]
     key_desc = " + ".join(layer_names)
-
     action_label = "Encrypt" if operation == "encrypt" else "Decrypt"
+
     progress_bar(
-        message=f"{action_label}ing through {num_layers} layer{'s' if num_layers > 1 else ''} ({key_desc})...",
+        message=f"{action_label}ing ({key_desc})...",
         total=5,
         step_delay=0.03,
     )
@@ -197,58 +181,46 @@ def perform_cipher_operation(message: str, operation: str) -> None:
         result = cipher.decrypt()
         cipher.save_decryption_to_file(key_desc, result)
 
-    console.print(f"\n[bold green]{action_label} result logged to {operation.capitalize()}.txt![/bold green]")
+    console.print(f"\n[bold green]Result saved to {operation.capitalize()}.txt[/bold green]")
     prompt_delay()
     clear_screen()
 
 
-def load_or_generate_media_key_menu() -> None:
-    """Interface to either generate sample keys or load existing media files."""
-    while True:
-        display_header("Load / Generate Media Key", "Create keys from Image or Music files")
-        console.print("[1] Generate Sample Key Image (.bmp)", style="bold cyan")
-        console.print("[2] Generate Sample Key Music (.wav)", style="bold magenta")
-        console.print("[3] Load Existing Image File (PNG, JPG, BMP, etc.)", style="bold yellow")
-        console.print("[4] Load Existing Music File (MP3, WAV, OGG, FLAC, etc.)", style="bold green")
-        console.print("[5] Return to Main Menu", style="bold white")
-        console.print()
+def generate_media_key_menu() -> None:
+    """Scans media folder (with default audio) and lets user choose by number or enter a custom path."""
+    display_header("ENIGMA", "Generate Media Key")
+    available_files = scan_media_folder()
+    display_media_folder_table(available_files)
 
-        choice = Prompt.ask("Choose an action", choices=["1", "2", "3", "4", "5"], default="1")
+    console.print("\n[dim]Choose by number (e.g. 1, or 1, 2), or enter a custom file path, or 'c' to cancel.[/dim]")
+    user_input = input("Select Media: ").strip()
+    if user_input.lower() in ("c", "cancel", "q", ""):
+        clear_screen()
+        return
 
-        if choice == "1":
-            clear_screen()
-            generate_sample_image(interactive=True)
-            break
-        elif choice == "2":
-            clear_screen()
-            generate_sample_music(interactive=True)
-            break
-        elif choice == "3" or choice == "4":
-            clear_screen()
-            media_kind = "image" if choice == "3" else "music"
-            path = input(f"Enter path to {media_kind} file: ").strip().strip('"').strip("'")
-            if path:
-                register_media_file(path, interactive=True)
-            break
-        elif choice == "5":
-            clear_screen()
-            break
+    selected_paths = resolve_media_input(user_input, available_files)
+    if not selected_paths:
+        prompt_delay()
+        clear_screen()
+        return
+
+    for path in selected_paths:
+        register_media_file(path, interactive=True)
+
+    clear_screen()
 
 
 def key_management_menu() -> None:
     """Sub-menu for key inspection, table overview, and deletion."""
     while True:
-        display_header("Key Management & Inspector", "View, inspect, or manage media keys")
-        console.print("[1] Show All Keys Overview", style="bold cyan")
-        console.print("[2] Inspect Detailed Character Mapping & Code", style="bold yellow")
-        console.print("[3] Load & Register Media File (Image / Music)", style="bold green")
-        console.print("[4] Generate Sample Key Image (.bmp)", style="bold blue")
-        console.print("[5] Generate Sample Key Music (.wav)", style="bold magenta")
-        console.print("[6] Delete a Key", style="bold red")
-        console.print("[7] Return to Main Menu", style="bold white")
+        display_header("ENIGMA", "Key Management")
+        console.print("[1] Show All Keys", style="bold cyan")
+        console.print("[2] Inspect Key Mapping", style="bold yellow")
+        console.print("[3] Delete a Key", style="bold red")
+        console.print("[4] Return to Main Menu", style="bold white")
         console.print()
 
-        choice = Prompt.ask("Choose an action", choices=["1", "2", "3", "4", "5", "6", "7"], default="1")
+        choice = Prompt.ask("Choose action", choices=["1", "2", "3", "4"], default="1")
 
         if choice == "1":
             clear_screen()
@@ -264,17 +236,6 @@ def key_management_menu() -> None:
             inspect_key(key_id)
         elif choice == "3":
             clear_screen()
-            path = input("Enter path to image or music file: ").strip().strip('"').strip("'")
-            if path:
-                register_media_file(path, interactive=True)
-        elif choice == "4":
-            clear_screen()
-            generate_sample_image(interactive=True)
-        elif choice == "5":
-            clear_screen()
-            generate_sample_music(interactive=True)
-        elif choice == "6":
-            clear_screen()
             show_all_keys()
             if not keys:
                 prompt_delay()
@@ -285,21 +246,21 @@ def key_management_menu() -> None:
             else:
                 console.print(f"[bold red]Key #{key_id} not found.[/bold red]")
             prompt_delay()
-        elif choice == "7":
+        elif choice == "4":
             clear_screen()
             break
 
 
 def file_cipher_menu() -> None:
     """Encrypts or decrypts text files on disk using 1 or more media keys."""
-    display_header("File Cryptography", "Encrypt or decrypt text documents with Media Keys")
-    action = Prompt.ask("Select file operation", choices=["encrypt", "decrypt", "back"], default="encrypt")
+    display_header("ENIGMA", "File Cryptography")
+    action = Prompt.ask("Select operation", choices=["encrypt", "decrypt", "back"], default="encrypt")
     if action == "back":
         return
 
     source_path = input("Enter path to source text file: ").strip().strip('"').strip("'")
     if not os.path.exists(source_path):
-        console.print(f"[bold red]Error: Source file '{source_path}' does not exist![/bold red]")
+        console.print(f"[bold red]Error: File '{source_path}' does not exist.[/bold red]")
         prompt_delay()
         return
 
@@ -319,7 +280,7 @@ def file_cipher_menu() -> None:
             content = f.read()
 
         progress_bar(
-            message=f"{action.capitalize()}ing file content across {len(selection)} key layer(s)...",
+            message=f"{action.capitalize()}ing file ({key_desc})...",
             total=6,
             step_delay=0.03,
         )
@@ -340,12 +301,12 @@ def file_cipher_menu() -> None:
                 f"Source: [cyan]{source_path}[/cyan]\n"
                 f"Destination: [cyan]{dest_path}[/cyan]\n"
                 f"Key(s) Used: [yellow]{key_desc}[/yellow] ({len(selection)} layer{'s' if len(selection) > 1 else ''})",
-                title="File Cryptography Result",
+                title="File Result",
                 border_style="green",
             )
         )
     except Exception as e:
-        console.print(f"[bold red]An error occurred during file processing: {e}[/bold red]")
+        console.print(f"[bold red]Error during file processing: {e}[/bold red]")
 
     prompt_delay()
     clear_screen()
