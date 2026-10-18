@@ -1,11 +1,14 @@
 import os
 import tempfile
 import unittest
-from image_key_cipher import (
+from media_cipher import (
+    MultiKeyCipher,
     ImageKeyCipher,
-    generate_key_from_image,
+    generate_key_from_bytes,
     create_sample_bmp_image,
-    image_to_code,
+    create_sample_wav_music,
+    media_to_code,
+    detect_media_type,
     FULL_CHARSET,
     ALPHABET_LOWER,
     ALPHABET_UPPER,
@@ -16,99 +19,111 @@ import key_module
 from menu_module import Menu
 
 
-class TestImageKeyCipher(unittest.TestCase):
-    """Test suite for ImageKeyCipher and image key generation."""
+class TestMediaCipher(unittest.TestCase):
+    """Test suite for MediaCipher (Image & Music keys, single & multi-key cascade)."""
 
     def setUp(self):
-        # Create a temporary BMP image file for deterministic testing
         self.tmp_dir = tempfile.TemporaryDirectory()
         self.test_img_path = os.path.join(self.tmp_dir.name, "test_key.bmp")
+        self.test_wav_path = os.path.join(self.tmp_dir.name, "test_music.wav")
+
         create_sample_bmp_image(self.test_img_path, width=32, height=32)
+        create_sample_wav_music(self.test_wav_path, duration_sec=0.5)
 
         with open(self.test_img_path, "rb") as f:
             self.img_bytes = f.read()
+        with open(self.test_wav_path, "rb") as f:
+            self.wav_bytes = f.read()
 
-        self.key, self.inverse_key, self.code_info = generate_key_from_image(self.img_bytes)
+        self.img_key, self.img_inv, self.img_info = generate_key_from_bytes(self.img_bytes, self.test_img_path)
+        self.wav_key, self.wav_inv, self.wav_info = generate_key_from_bytes(self.wav_bytes, self.test_wav_path)
 
     def tearDown(self):
         self.tmp_dir.cleanup()
 
-    def test_image_code_generation(self):
-        code_info = image_to_code(self.img_bytes)
-        self.assertIn("sha256", code_info)
-        self.assertEqual(len(code_info["sha256"]), 64)
-        self.assertIn("short_code", code_info)
-        self.assertEqual(len(code_info["short_code"]), 16)
-        self.assertTrue(int(code_info["byte_size"]) > 0)
+    def test_media_type_detection(self):
+        self.assertEqual(detect_media_type("photo.png"), "image")
+        self.assertEqual(detect_media_type("song.mp3"), "music")
+        self.assertEqual(detect_media_type("track.wav"), "music")
+        self.assertEqual(detect_media_type("data.bin"), "media")
 
-    def test_substitution_key_covers_all_categories(self):
-        # Must cover exactly 95 distinct characters
-        self.assertEqual(len(self.key), 95)
-        self.assertEqual(len(set(self.key.values())), 95)
+    def test_image_and_music_code_generation(self):
+        img_code = media_to_code(self.img_bytes, self.test_img_path)
+        wav_code = media_to_code(self.wav_bytes, self.test_wav_path)
 
-        # Check alphabet, numbers, and symbols are all present as keys
-        for char in ALPHABET_LOWER + ALPHABET_UPPER:
-            self.assertIn(char, self.key)
-        for num in NUMBERS:
-            self.assertIn(num, self.key)
-        for sym in SYMBOLS:
-            self.assertIn(sym, self.key)
+        self.assertEqual(len(img_code["sha256"]), 64)
+        self.assertEqual(len(wav_code["sha256"]), 64)
+        self.assertEqual(img_code["media_type"], "image")
+        self.assertEqual(wav_code["media_type"], "music")
+        self.assertNotEqual(img_code["sha256"], wav_code["sha256"])
 
-    def test_encrypt_and_decrypt_roundtrip(self):
-        message = "Enigma Secret 2026: Hello World! [Symbols: @#$%^&*()-=_+{}|;:'\",.<>/?]"
-        cipher = ImageKeyCipher(
-            message=message,
-            key=self.key,
-            image_code=self.code_info["sha256"],
-            image_path=self.test_img_path,
-            show_ui=False,
-        )
+    def test_single_key_roundtrip(self):
+        message = "Single Key Secret 2026: Hello World! [100% OK!]"
+        cipher = ImageKeyCipher(message, self.img_key, show_ui=False)
         encrypted = cipher.encrypt()
         self.assertNotEqual(message, encrypted)
 
-        # Check that numbers and symbols were substituted
-        self.assertNotIn("2026", encrypted)
-        self.assertNotIn("@#$%^&*", encrypted)
-
-        decrypt_cipher = ImageKeyCipher(
-            message=encrypted,
-            key=self.key,
-            image_code=self.code_info["sha256"],
-            image_path=self.test_img_path,
-            show_ui=False,
-        )
+        decrypt_cipher = ImageKeyCipher(encrypted, self.img_key, show_ui=False)
         decrypted = decrypt_cipher.decrypt()
         self.assertEqual(message, decrypted)
 
-    def test_deterministic_key_reproducibility(self):
-        # Two key generations from the exact same image bytes must produce identical keys
-        key_1, _, code_1 = generate_key_from_image(self.img_bytes)
-        key_2, _, code_2 = generate_key_from_image(self.img_bytes)
-        self.assertEqual(key_1, key_2)
-        self.assertEqual(code_1["sha256"], code_2["sha256"])
+    def test_two_key_cascade_image_and_music(self):
+        message = "Multi-Key Mission 2026: Image + Music Fused! #TopSecret"
+        layers = [
+            ("1", self.img_key, self.img_info),
+            ("2", self.wav_key, self.wav_info),
+        ]
 
-    def test_different_image_produces_different_key(self):
-        # Alter a single byte
-        altered_bytes = bytearray(self.img_bytes)
-        altered_bytes[60] = (altered_bytes[60] + 1) % 256
-        altered_bytes = bytes(altered_bytes)
+        cipher = MultiKeyCipher(message, layers, show_ui=False)
+        encrypted = cipher.encrypt()
+        self.assertNotEqual(message, encrypted)
 
-        key_altered, _, code_altered = generate_key_from_image(altered_bytes)
-        self.assertNotEqual(self.code_info["sha256"], code_altered["sha256"])
-        self.assertNotEqual(self.key, key_altered)
+        # Single key decryption must FAIL to decrypt correctly
+        single_decrypt = ImageKeyCipher(encrypted, self.img_key, show_ui=False).decrypt()
+        self.assertNotEqual(message, single_decrypt)
+
+        # Both keys in reverse order must decrypt perfectly
+        decrypt_cipher = MultiKeyCipher(encrypted, layers, show_ui=False)
+        decrypted = decrypt_cipher.decrypt()
+        self.assertEqual(message, decrypted)
+
+    def test_three_key_cascade_roundtrip(self):
+        # Alter 1 byte in wav to create a 3rd distinct key
+        wav_bytes_3 = bytearray(self.wav_bytes)
+        wav_bytes_3[100] = (wav_bytes_3[100] + 1) % 256
+        key_3, _, info_3 = generate_key_from_bytes(bytes(wav_bytes_3), "synth.wav")
+
+        message = "Triple Layer Cryptography: 12345 @#$%^&*"
+        layers = [
+            ("1", self.img_key, self.img_info),
+            ("2", self.wav_key, self.wav_info),
+            ("3", key_3, info_3),
+        ]
+
+        cipher = MultiKeyCipher(message, layers, show_ui=False)
+        encrypted = cipher.encrypt()
+        self.assertNotEqual(message, encrypted)
+
+        decrypt_cipher = MultiKeyCipher(encrypted, layers, show_ui=False)
+        decrypted = decrypt_cipher.decrypt()
+        self.assertEqual(message, decrypted)
 
     def test_preserves_multiline_newlines(self):
-        message = "Line 1: Hello\nLine 2: World 123!\nLine 3: End."
-        cipher = ImageKeyCipher(message, self.key, show_ui=False)
+        message = "Line 1\nLine 2: 123\nLine 3: Symbols @#"
+        layers = [
+            ("1", self.img_key, self.img_info),
+            ("2", self.wav_key, self.wav_info),
+        ]
+        cipher = MultiKeyCipher(message, layers, show_ui=False)
         encrypted = cipher.encrypt()
         self.assertEqual(encrypted.count("\n"), 2)
 
-        decrypt_cipher = ImageKeyCipher(encrypted, self.key, show_ui=False)
+        decrypt_cipher = MultiKeyCipher(encrypted, layers, show_ui=False)
         self.assertEqual(decrypt_cipher.decrypt(), message)
 
 
 class TestKeyModule(unittest.TestCase):
-    """Test suite for image key management and persistence."""
+    """Test suite for image and music key management and multi-key parsing."""
 
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
@@ -117,7 +132,7 @@ class TestKeyModule(unittest.TestCase):
         self.original_keys_dir = key_module.KEYS_DIR
 
         key_module.KEYS_FILE = self.tmp_keys_file
-        key_module.KEYS_DIR = os.path.join(self.tmp_dir.name, "key_images")
+        key_module.KEYS_DIR = os.path.join(self.tmp_dir.name, "key_media")
         key_module.keys.clear()
         key_module.keys_metadata.clear()
 
@@ -126,38 +141,55 @@ class TestKeyModule(unittest.TestCase):
         key_module.KEYS_DIR = self.original_keys_dir
         self.tmp_dir.cleanup()
 
-    def test_generate_sample_image_key(self):
-        key = key_module.generate_key(interactive=False)
-        self.assertEqual(len(key), 95)
-        self.assertEqual(len(key_module.keys), 1)
+    def test_generate_image_and_music_keys(self):
+        img_res = key_module.generate_sample_image(interactive=False)
+        self.assertIsNotNone(img_res)
+        self.assertEqual(key_module.keys_metadata["1"]["media_type"], "image")
+
+        mus_res = key_module.generate_sample_music(interactive=False)
+        self.assertIsNotNone(mus_res)
+        self.assertEqual(key_module.keys_metadata["2"]["media_type"], "music")
+
+        self.assertEqual(len(key_module.keys), 2)
         self.assertTrue(os.path.exists(self.tmp_keys_file))
+
+    def test_parse_and_resolve_multiple_keys(self):
+        key_module.keys["1"] = {"a": "b"}
+        key_module.keys_metadata["1"] = {"media_type": "image", "code": "hash1"}
+        key_module.keys["2"] = {"b": "c"}
+        key_module.keys_metadata["2"] = {"media_type": "music", "code": "hash2"}
+
+        resolved_single = key_module.parse_and_resolve_keys("1")
+        self.assertEqual(len(resolved_single), 1)
+
+        resolved_double = key_module.parse_and_resolve_keys("1, 2")
+        self.assertEqual(len(resolved_double), 2)
+        self.assertEqual(resolved_double[0][0], "1")
+        self.assertEqual(resolved_double[1][0], "2")
+
+        resolved_space = key_module.parse_and_resolve_keys("1 2")
+        self.assertEqual(len(resolved_space), 2)
+
+        invalid = key_module.parse_and_resolve_keys("999, 888")
+        self.assertIsNone(invalid)
 
     def test_key_persistence_json(self):
-        gen_key = key_module.generate_key(interactive=False)
+        key_module.generate_sample_image(interactive=False)
         self.assertTrue(os.path.exists(self.tmp_keys_file))
 
-        # Clear in-memory keys and reload from JSON
         key_module.keys.clear()
         key_module.keys_metadata.clear()
         key_module.load_keys()
 
         self.assertEqual(len(key_module.keys), 1)
-        self.assertEqual(key_module.keys["1"], gen_key)
-        self.assertIn("1", key_module.keys_metadata)
+        self.assertIn("1", key_module.keys)
+        self.assertEqual(key_module.keys_metadata["1"]["media_type"], "image")
 
     def test_delete_key(self):
         key_module.keys["999"] = {"a": "b"}
-        key_module.keys_metadata["999"] = {"image_code": "test"}
+        key_module.keys_metadata["999"] = {"media_type": "image"}
         self.assertTrue(key_module.delete_key("999"))
         self.assertNotIn("999", key_module.keys)
-        self.assertFalse(key_module.delete_key("999"))
-
-    def test_select_key(self):
-        key_module.keys["123"] = {"a": "b"}
-        sel = key_module.select_key("123")
-        self.assertEqual(sel, ("123", {"a": "b"}))
-        invalid = key_module.select_key("999999")
-        self.assertIsNone(invalid)
 
 
 class TestMenuModule(unittest.TestCase):

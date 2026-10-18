@@ -6,73 +6,160 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A modular, extensible terminal cryptography application implemented in Python. The program features an interactive, styled command-line interface powered by the [Rich](https://github.com/Textualize/rich) library, complete with persistent JSON key management, disk file encryption/decryption, an image-derived cryptographic key engine that replaces all alphabets, numbers, and symbols, and automated test coverage.
+A modern, multi-layer terminal cryptography suite implemented in Python. The application transforms **Image files** (PNG, JPG, BMP, etc.) and **Music/Audio files** (MP3, WAV, FLAC, etc.) into cryptographic code fingerprints, turning them into substitution keys. Users can encrypt messages and files using **1 key**, **combine both Image and Music keys**, or chain **2 or more keys in a sequential multi-rotor cascade pipeline**.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Key Features](#key-features)
+- [How the Encryption Works](#how-the-encryption-works)
+  - [1. Media-to-Code Transformation](#1-media-to-code-transformation)
+  - [2. Deterministic Key Derivation (95 Characters)](#2-deterministic-key-derivation-95-characters)
+  - [3. Multi-Key Cascade Encryption (1, 2, or More Keys)](#3-multi-key-cascade-encryption-1-2-or-more-keys)
+  - [4. Reversing the Cascade (Decryption)](#4-reversing-the-cascade-decryption)
 - [System Architecture](#system-architecture)
-  - [Workflow Diagram](#workflow-diagram)
+  - [Workflow & Pipeline Diagram](#workflow--pipeline-diagram)
   - [Repository Structure](#repository-structure)
   - [Module Breakdown](#module-breakdown)
-- [Cryptographic Mechanics & Algorithmic Complexity](#cryptographic-mechanics--algorithmic-complexity)
-  - [Image to Code & Key Derivation](#image-to-code--key-derivation)
-  - [95-Character Substitution Table](#95-character-substitution-table)
-  - [Instant $O(1)$ Decryption Optimization](#instant-o1-decryption-optimization)
-  - [Formatting & Multiline Preservation](#formatting--multiline-preservation)
-- [Prerequisites](#prerequisites)
-- [Installation & Setup](#installation--setup)
-- [Usage & Interactive CLI Walkthrough](#usage--interactive-cli-walkthrough)
-  - [Starting the Application](#starting-the-application)
+- [Cryptographic Mechanics & Complexity](#cryptographic-mechanics--complexity)
+  - [Full 95-Character Printable Set](#full-95-character-printable-set)
+  - [Instant $O(1)$ Hash Map Lookups](#instant-o1-hash-map-lookups)
+  - [Keyspace & Compounded Entropy](#keyspace--compounded-entropy)
+- [Installation & Quick Start](#installation--quick-start)
+- [Interactive CLI Walkthrough](#interactive-cli-walkthrough)
   - [Main Menu Navigation](#main-menu-navigation)
-  - [Option A: Encrypt Message](#option-a-encrypt-message)
-  - [Option B: Decrypt Message](#option-b-decrypt-message)
-  - [Option C: Load / Generate Image Key](#option-c-load--generate-image-key)
-  - [Option D: Manage & Inspect Image Keys](#option-d-manage--inspect-image-keys)
+  - [Option A: Encrypt Message (Single or Multi-Key)](#option-a-encrypt-message-single-or-multi-key)
+  - [Option B: Decrypt Message (Single or Multi-Key)](#option-b-decrypt-message-single-or-multi-key)
+  - [Option C: Load / Generate Media Key (Image / Music)](#option-c-load--generate-media-key-image--music)
+  - [Option D: Manage & Inspect Keys](#option-d-manage--inspect-keys)
   - [Option E: File Cryptography (.txt Documents)](#option-e-file-cryptography-txt-documents)
-  - [Option X: Clean Exit](#option-x-clean-exit)
 - [Key Storage & JSON Persistence](#key-storage--json-persistence)
 - [Audit Logging System](#audit-logging-system)
 - [Automated Unit Testing](#automated-unit-testing)
-- [Troubleshooting & FAQ](#troubleshooting--faq)
 - [Security Notice](#security-notice)
 
 ---
 
 ## Overview
 
-**Enigma Machine** is a command-line cryptography suite built for encrypting, decrypting, inspecting, and managing text and files directly in the terminal using **image-derived cryptographic keys**. Any image file (PNG, JPG, BMP, WEBP, etc.) can be loaded or generated, turned into cryptographic code, and used as a substitution key that scrambles the entire alphabet (lowercase and uppercase), numbers, and symbols.
+Traditional substitution ciphers rely on manually configured alphabets or pseudo-random letter shuffles. **Enigma Machine** takes inspiration from physical multi-rotor encryption (such as the historic Enigma machine) and combines it with modern media hashing:
 
-Designed with user experience and reliability at its core, the application features input validation, crash recovery, cancellation prompts, and persistent storage across sessions.
+1. **Any Media as a Key**: Point the program to any image file or music/sound file.
+2. **Turn Media into Code**: The program converts the file's raw binary data into a cryptographic **SHA-256 fingerprint**.
+3. **95-Character Scrambling**: Derives a complete substitution map covering lowercase letters (`a-z`), uppercase letters (`A-Z`), digits (`0-9`), and symbols/spaces.
+4. **Multi-Key Combination**: Choose 1 key, or combine **Image + Music**, or chain **3 or more keys** together into a layered cascade.
 
 ---
 
-## Key Features
+## How the Encryption Works
 
-- **Image-to-Code Key Derivation**: Turns any image file into a cryptographic SHA-256 fingerprint and deterministic seed to create unique substitution keys.
-- **Full-Spectrum Character Substitution (95 characters)**: Completely scrambles lowercase letters (`a-z`), uppercase letters (`A-Z`), digits (`0-9`), and all symbols & punctuation (`!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ `).
-- **Built-in Key Image Generator**: Creates colorful, valid 24-bit uncompressed `.bmp` key images on demand with zero external dependencies.
-- **Persistent Key Store (`keys.json`)**: Image paths, cryptographic codes, timestamps, and substitution mappings are saved to disk and reloaded on startup.
-- **Optimized $O(1)$ Inverted Lookup**: Precomputes an inverted substitution dictionary upon cipher initialization, turning decryption from an $O(N)$ linear scan into an instantaneous $O(1)$ hash map lookup.
-- **File Cryptography**: Encrypt and decrypt arbitrary `.txt` files directly on disk with automatic destination naming (`_encrypted.txt` and `_decrypted.txt`) and confirmation panels.
-- **Detailed Key Inspector**: Renders side-by-side [Rich Tables](https://rich.readthedocs.io/) showing image metadata, SHA-256 fingerprints, and character mappings for letters, numbers, and symbols.
-- **Crash & Edge-Case Protection**:
-  - Handles empty key stores gracefully with on-the-spot generation/loading prompts.
-  - Safe cancellation options (`'c'`, `'cancel'`, `'q'`, or empty input) return cleanly without throwing exceptions.
-  - Safe pass-through for non-ASCII characters and multiline linebreaks (`\n`).
-  - Handles `Ctrl+C` (`KeyboardInterrupt`) cleanly without traceback dumps.
-- **Styled Terminal UI**: Animated progress bars, spinner columns, styled cards, colored tables, and cross-platform terminal clearing (`cls` / `clear`).
-- **Comprehensive Unit Testing**: Built-in test suite covering image-to-code generation, BMP generation, roundtrip encryption/decryption across letters, numbers, and symbols, persistence, and menu dispatching.
-- **Audit Logs**: Automatically logs all operations to `Encryption.txt` and `Decryption.txt` with formatted timestamps, key IDs, image codes, and result strings.
+### 1. Media-to-Code Transformation
+
+Every media file is made of thousands or millions of binary bytes. When an image or music file is loaded, the engine hashes its raw bytes using **SHA-256**:
+
+```
+┌─────────────────────────────────┐
+│ Media File (Image or Music)     │
+│   • photo.png (RGB pixels)      │
+│   • song.mp3  (Audio samples)   │
+└────────────────┬────────────────┘
+                 │ Read raw bytes
+                 ▼
+┌─────────────────────────────────┐
+│ Cryptographic SHA-256 Hashing   │
+│   SHA-256(MediaBytes)           │
+└────────────────┬────────────────┘
+                 │ Produces 64-character hex code
+                 ▼
+┌────────────────────────────────────────────────────────┐
+│ Code Fingerprint:                                      │
+│   "7d9f2a4b8c1e6035...d4a8" (64 Hex Characters)      │
+└────────────────────────────────────────────────────────┘
+```
+
+- **Deterministic**: The exact same image or music file always produces the exact same cryptographic code.
+- **Avalanche Effect**: If even 1 pixel or 1 audio sample changes, the resulting code changes completely, generating a totally different cipher key.
+
+### 2. Deterministic Key Derivation (95 Characters)
+
+The 64-character SHA-256 code is converted into a 256-bit integer seed that initializes a deterministic pseudo-random generator. This generator shuffles all **95 printable ASCII characters**:
+
+| Category | Character Count | Elements |
+|---|:---:|---|
+| **Lowercase Alphabet** | 26 | `abcdefghijklmnopqrstuvwxyz` |
+| **Uppercase Alphabet** | 26 | `ABCDEFGHIJKLMNOPQRSTUVWXYZ` |
+| **Numbers / Digits** | 10 | `0123456789` |
+| **Symbols & Space** | 33 | `!"#$%&'()*+,-./:;<=>?@[\]^_`{\|}~ ` |
+| **Total Set** | **95** | Complete printable character space |
+
+Every character in the 95-character set is mapped **1-to-1** (bijective) to a substitute character. No character is ignored or skipped.
+
+### 3. Multi-Key Cascade Encryption (1, 2, or More Keys)
+
+You can choose to encrypt using:
+- **1 Key**: Single layer (e.g., Image Key #1).
+- **2 Keys (Combined Image + Music)**: Double layer (e.g., Key #1 + Key #2).
+- **3 or More Keys**: Triple or $N$-layer multi-rotor pipeline.
+
+When multiple keys are selected, the message passes through each key sequentially, exactly like electrical signals passing through the rotors of an Enigma machine:
+
+```text
+Plaintext:  "Secret 2026: Hello World! #TopSecret"
+                   │
+                   ▼
+┌────────────────────────────────────────────────────────┐
+│  LAYER 1: Key #1 (🖼️ Image Key - "key_image_1.bmp")   │
+│  SHA-256: 24073ca421286a86...                          │
+└──────────────────┬─────────────────────────────────────┘
+                   │ Intermediate Ciphertext 1
+                   ▼
+┌────────────────────────────────────────────────────────┐
+│  LAYER 2: Key #2 (🎵 Music Key - "key_music_2.wav")   │
+│  SHA-256: 8b4e7c1039da5f21...                          │
+└──────────────────┬─────────────────────────────────────┘
+                   │ Intermediate Ciphertext 2
+                   ▼
+┌────────────────────────────────────────────────────────┐
+│  LAYER 3: Key #3 (📁 Additional Key - optional)        │
+└──────────────────┬─────────────────────────────────────┘
+                   │
+                   ▼
+Final Ciphertext:  "w$2a9%K;r!o8fc...5#rFCtt"
+```
+
+Each subsequent layer scrambles the output of the previous layer, compounding confusion and diffusion across the entire text.
+
+### 4. Reversing the Cascade (Decryption)
+
+To decrypt a multi-key message, the ciphertext must pass through the **inverse mappings in exact reverse order (LIFO - Last In, First Out)**:
+
+```text
+Final Ciphertext:  "w$2a9%K;r!o8fc...5#rFCtt"
+                   │
+                   ▼
+┌────────────────────────────────────────────────────────┐
+│  STEP 1: Invert Layer 2 (🎵 Music Key #2)              │
+│  Applies inverse mapping of Key #2                     │
+└──────────────────┬─────────────────────────────────────┘
+                   │ Restores Intermediate Ciphertext 1
+                   ▼
+┌────────────────────────────────────────────────────────┐
+│  STEP 2: Invert Layer 1 (🖼️ Image Key #1)              │
+│  Applies inverse mapping of Key #1                     │
+└──────────────────┬─────────────────────────────────────┘
+                   │
+                   ▼
+Original Plaintext: "Secret 2026: Hello World! #TopSecret"
+```
+
+The user simply enters the key combination (e.g., `1, 2`), and the program automatically unwinds the layers in reverse order.
 
 ---
 
 ## System Architecture
 
-### Workflow Diagram
+### Workflow & Pipeline Diagram
 
 ```mermaid
 flowchart TD
@@ -81,21 +168,27 @@ flowchart TD
     
     MenuModule -->|Option A: Encrypt| EncryptFlow[Message Encryption]
     MenuModule -->|Option B: Decrypt| DecryptFlow[Message Decryption]
-    MenuModule -->|Option C: Load/Gen Key| KeyGen[key_module.py: Image Key Generator/Loader]
+    MenuModule -->|Option C: Load/Gen Key| KeyGen[key_module.py: Image & Music Key Generator/Loader]
     MenuModule -->|Option D: Inspect/Delete| KeyMgmt[key_module.py: Key Inspector & Storage]
     MenuModule -->|Option E: File Cipher| FileFlow[File Cryptography]
     MenuModule -->|Option X: Exit| ExitApp([Clean Exit])
 
-    EncryptFlow --> KeySelect{Select Key / Image Path}
+    EncryptFlow --> KeySelect{Select 1, 2, or N Keys}
     DecryptFlow --> KeySelect
     FileFlow --> KeySelect
 
     KeySelect -->|Key Store| KeyStore[(keys.json)]
-    KeySelect -->|Raw Image File| ImageReader[image_key_cipher.py: read_image_bytes & image_to_code]
-    KeySelect --> CipherEngine[[image_key_cipher.py: ImageKeyCipher]]
+    KeySelect -->|Direct Media Files| MediaReader[media_cipher.py: read_media_bytes & media_to_code]
     
-    CipherEngine -->|O(1) Forward / Inverse Map| Results[Rich UI Card Display]
-    CipherEngine -->|Append Audit Entry| Logs[(Encryption.txt / Decryption.txt)]
+    MediaReader --> CipherEngine[[media_cipher.py: MultiKeyCipher]]
+    KeyStore --> CipherEngine
+    
+    CipherEngine -->|Layer 1: Key A| L1[Rotor Layer 1]
+    L1 -->|Layer 2: Key B| L2[Rotor Layer 2]
+    L2 -->|Layer N: Key N| LN[Rotor Layer N]
+    
+    LN --> Results[Rich UI Pipeline Display]
+    LN --> Logs[(Encryption.txt / Decryption.txt)]
 ```
 
 ### Repository Structure
@@ -104,18 +197,19 @@ flowchart TD
 Enigma Machine/
 ├── main.py                   # Main CLI entry point and menu router
 ├── menu_module.py            # Menu UI flows, input validation, and dispatchers
-├── key_module.py             # Image key registration, JSON persistence, inspection tables
-├── image_key_cipher.py       # Image-to-code cryptographic cipher engine (alphabet, numbers, symbols)
+├── key_module.py             # Key store, JSON persistence, image/music key registration
+├── media_cipher.py           # Core cryptographic engine (Image + Music + Multi-Key Cascade)
+├── image_key_cipher.py       # Backward-compatibility alias re-exporting media_cipher
 ├── utilities_module.py       # Cross-platform terminal helpers, progress animations
-├── mesage_encryptor.py       # Cryptographic message data model with image metadata
-├── test_enigma.py            # Unit test suite (unittest)
+├── mesage_encryptor.py       # Cryptographic message data model with media metadata
+├── test_enigma.py            # Automated unit test suite (unittest)
 ├── keys.json                 # Persistent key storage file (auto-generated)
-├── key_images/               # Directory for generated sample key images (auto-generated)
+├── key_media/                # Directory for generated sample key images & music
 ├── Encryption.txt            # Audit log for encryption operations (auto-generated)
 ├── Decryption.txt            # Audit log for decryption operations (auto-generated)
 ├── requirements.txt          # Python dependencies (rich)
 ├── .gitignore                # Ignored cache, logs, and persistent data
-└── README.md                 # Project documentation
+└── README.md                 # Complete project documentation
 ```
 
 ### Module Breakdown
@@ -123,70 +217,51 @@ Enigma Machine/
 | Module | Primary Symbol / Class | Description |
 |---|---|---|
 | [main.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/main.py) | `main()`, `main_menu()` | Registers main menu options, dispatches user actions, and manages clean exit routines. |
-| [menu_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/menu_module.py) | [Menu](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/menu_module.py#L38-L82), `encrypt_menu()`, `decrypt_menu()`, `file_cipher_menu()`, `key_management_menu()` | Renders styled menus, coordinates user prompts, validates input, and controls workflow transitions. |
-| [key_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/key_module.py) | `register_image_file()`, `generate_key()`, `load_keys()`, `save_keys()`, `show_all_keys()`, `inspect_key()`, `delete_key()` | Converts image files to keys, generates sample key images, persists keys in `keys.json`, and renders formatted Rich tables. |
-| [image_key_cipher.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/image_key_cipher.py) | [ImageKeyCipher](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/image_key_cipher.py#L98-L195), `generate_key_from_image()`, `image_to_code()` | Converts image bytes into code fingerprints, generates 95-char substitution maps, executes $O(1)$ operations, and logs results. |
-| [utilities_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/utilities_module.py) | `clear_screen()`, `progress_bar()`, `display_header()`, `prompt_delay()` | Provides cross-platform terminal clearing, animated spinner progress bars, and standardized visual banners. |
-| [mesage_encryptor.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/mesage_encryptor.py) | [Message](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/mesage_encryptor.py#L7-L18) | Clean dataclass model wrapping message text, operation modes, and associated key metadata. |
-| [test_enigma.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/test_enigma.py) | `TestImageKeyCipher`, `TestKeyModule`, `TestMenuModule` | Full unit test suite validating image-to-code generation, roundtrips, symbol & number substitution, persistence, and key selection. |
+| [menu_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/menu_module.py) | [Menu](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/menu_module.py#L38-L82), `encrypt_menu()`, `decrypt_menu()`, `key_selection_menu()` | Coordinates user prompts, validates single and multi-key inputs, and runs animated progress bars. |
+| [key_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/key_module.py) | `register_media_file()`, `generate_sample_image()`, `generate_sample_music()`, `parse_and_resolve_keys()` | Manages Image and Music keys, persists metadata in `keys.json`, and parses multi-key arguments. |
+| [media_cipher.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/media_cipher.py) | [MultiKeyCipher](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/media_cipher.py#L182-L290), `create_sample_bmp_image()`, `create_sample_wav_music()` | Converts image and audio files into cryptographic codes, executes multi-layer cascade substitution, and logs results. |
+| [utilities_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/utilities_module.py) | `clear_screen()`, `progress_bar()`, `display_header()`, `prompt_delay()` | Terminal clearing, animated progress bars, and standardized visual banners. |
+| [test_enigma.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/test_enigma.py) | `TestMediaCipher`, `TestKeyModule`, `TestMenuModule` | 12 automated unit tests validating single-key, double-key (image + music), triple-key roundtrips, and persistence. |
 
 ---
 
-## Cryptographic Mechanics & Algorithmic Complexity
+## Cryptographic Mechanics & Complexity
 
-### Image to Code & Key Derivation
+### Full 95-Character Printable Set
 
-Instead of relying on basic letter shuffling, keys are derived from **image files** (PNG, JPG, BMP, WEBP, GIF, etc.):
-1. The image is read as a raw binary byte sequence.
-2. A cryptographic **SHA-256 hash** (64 hex characters) and short fingerprint (16 characters) are generated:
-   $$\text{Seed} = \text{SHA-256}(\text{ImageBytes})$$
-3. The cryptographic digest is converted into an integer seed to initialize a deterministic pseudo-random generator.
-4. The 95-character set is scrambled deterministically:
-   - Identical image files will always produce the exact same substitution key.
-   - Any single-bit change in an image produces an entirely different key (avalanche effect).
+The cipher maps every printable ASCII character (codes 32 to 126 inclusive):
+- **Alphabet**: `a-z` (26) and `A-Z` (26)
+- **Numbers**: `0-9` (10)
+- **Symbols**: `!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ` (33)
 
-### 95-Character Substitution Table
+Characters outside this set (such as multiline newlines `\n` and tabs `\t`) are preserved, ensuring formatted files and paragraphs retain their structure while all text content is thoroughly scrambled.
 
-The cipher operates over all 95 printable ASCII characters:
-- **Lowercase alphabet**: `a` through `z` (26 characters)
-- **Uppercase alphabet**: `A` through `Z` (26 characters)
-- **Numbers**: `0` through `9` (10 characters)
-- **Symbols & whitespace**: `!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ` (32 punctuation characters + space = 33 characters)
+### Instant $O(1)$ Hash Map Lookups
 
-Each key is a bijective permutation across all 95 characters:
-$$\text{Keyspace} = 95! \approx 1.0329 \times 10^{148}$$
-
-This ensures that letters, numbers, punctuation, and spaces are completely substituted and encrypted.
-
-### Instant $O(1)$ Decryption Optimization
-
-In naive implementations, decrypting a character requires searching the entire substitution dictionary ($O(K)$ where $K = 95$ per character).
-
-[ImageKeyCipher](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/image_key_cipher.py#L98-L195) precomputes an inverted hash map once during initialization:
+Every key layer precomputes an inverse dictionary mapping upon initialization:
 
 ```python
-self.inverse_key: dict[str, str] = {v: k for k, v in self.key.items()}
+self.inverse_key = {v: k for k, v in self.key.items()}
 ```
 
-- **Encryption Complexity**: $O(N)$ total time, with $O(1)$ lookup per character via `self.key.get(char, char)`.
-- **Decryption Complexity**: $O(N)$ total time, with $O(1)$ lookup per character via `self.inverse_key.get(char, char)`.
-- **Space Complexity**: $O(K)$ where $K = 95$ entries in memory.
+- **Per-Character Lookup**: $O(1)$ time complexity.
+- **Single-Layer Execution**: $O(N)$ where $N$ is the message length.
+- **$M$-Layer Multi-Key Cascade**: $O(M \cdot N)$ total time across $M$ keys.
 
-### Formatting & Multiline Preservation
+### Keyspace & Compounded Entropy
 
-Characters outside the 95-character printable set (such as line breaks `\n` and tabs `\t`) pass through unmodified, preserving multi-line file structure while thoroughly scrambling the entire body text.
+For a single key layer over 95 characters:
+$$\text{Keyspace}_1 = 95! \approx 1.0329 \times 10^{148}$$
+
+When combining $M$ independent media keys in a cascade:
+$$\text{Compounded Permutation States} \approx (95!)^M$$
+
+For a 2-key combination (Image + Music):
+$$(95!)^2 \approx 1.067 \times 10^{296}$$
 
 ---
 
-## Prerequisites
-
-- **Python**: Version `3.10` or higher.
-- **Operating System**: Windows 10/11, macOS, or Linux.
-- **Terminal**: Modern terminal with ANSI color and UTF-8 support (PowerShell, Windows Terminal, Bash, Zsh).
-
----
-
-## Installation & Setup
+## Installation & Quick Start
 
 1. **Clone or Download the Repository**:
    ```bash
@@ -194,53 +269,34 @@ Characters outside the 95-character printable set (such as line breaks `\n` and 
    cd "Enigma Machine"
    ```
 
-2. **Set Up a Virtual Environment (Recommended)**:
-   - **Windows (PowerShell)**:
-     ```powershell
-     py -m venv .venv
-     .venv\Scripts\Activate.ps1
-     ```
-   - **macOS / Linux**:
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     ```
-
-3. **Install Dependencies**:
+2. **Install Dependencies**:
    ```bash
    pip install -r requirements.txt
+   ```
+   *(Only requires `rich` for terminal UI styling; all image and audio generators use Python's built-in standard library with zero third-party dependencies).*
+
+3. **Launch Application**:
+   ```bash
+   py main.py          # Windows
+   python3 main.py     # macOS / Linux
    ```
 
 ---
 
-## Usage & Interactive CLI Walkthrough
-
-### Starting the Application
-
-Launch the program using Python:
-
-```bash
-# Windows
-py main.py
-
-# macOS / Linux
-python3 main.py
-```
+## Interactive CLI Walkthrough
 
 ### Main Menu Navigation
-
-Upon launch, you are greeted with the styled main navigation panel:
 
 ```text
 ╭──────────────────────────────────────────────────╮
 │                  ENIGMA MACHINE                  │
-│ Image Key Cryptography (Alphabet, Numbers & Sym) │
+│ Multi-Key Media Cryptography (Image + Music)     │
 ╰──────────────────────────────────────────────────╯
 
-[A] - Encrypt Message
-[B] - Decrypt Message
-[C] - Load / Generate Image Key
-[D] - Manage & Inspect Image Keys
+[A] - Encrypt Message (1, 2, or Multiple Keys)
+[B] - Decrypt Message (1, 2, or Multiple Keys)
+[C] - Load / Generate Media Key (Image / Music)
+[D] - Manage & Inspect Keys
 [E] - File Cryptography (Encrypt/Decrypt .txt)
 [X] - Exit Program
 
@@ -249,149 +305,128 @@ Enter the code of the option you want to select:
 
 ---
 
-### Option A: Encrypt Message
+### Option A: Encrypt Message (Single or Multi-Key)
 
 1. Select option **`A`**.
-2. Input the plain text message when prompted (including letters, numbers, and symbols).
-3. A table of available keys is displayed. Enter the key number (e.g., `1`), or provide an image file path directly (e.g., `my_photo.png`), or press `'c'` to cancel.
-4. An animated progress bar simulates cipher execution.
+2. Type the message to encrypt (can include letters, numbers, symbols, spaces):
+   ```text
+   Enter the message to encrypt: Top Secret 2026: Project Enigma [Launch Code #99!]
+   ```
+3. A table of available keys is displayed. You can:
+   - **Use 1 key**: Type `1`
+   - **Combine 2 keys (Image + Music)**: Type `1, 2`
+   - **Combine 3 or more keys**: Type `1, 2, 3`
+   - **Use direct files**: Type `photo.png, song.mp3`
+4. An animated progress bar simulates cipher execution:
+   ```text
+   Encrypting through 2 layers (#1 (image) + #2 (music))... ━━━━━━━━━━ 100% 0.2s
+   ```
 5. A stylized **ENCRYPTION RESULT** card appears, displaying:
-   - The original input string.
-   - The encrypted ciphertext.
-   - Source Image File and Image Code (SHA-256 fingerprint).
-   - Sample preview showing substituted alphabet, numbers, and symbols.
+   - The input string.
+   - The final encrypted ciphertext.
+   - A **Multi-Stage Pipeline Table** showing each key layer, media icon, file name, and SHA-256 fingerprint.
 6. The operation is logged to `Encryption.txt`.
 
 ---
 
-### Option B: Decrypt Message
+### Option B: Decrypt Message (Single or Multi-Key)
 
 1. Select option **`B`**.
 2. Enter or paste the ciphertext.
-3. Select the key number or image file used for the original encryption.
-4. The cipher executes an instantaneous $O(1)$ inverse lookup.
-5. The decrypted original text is displayed and logged to `Decryption.txt`.
+3. Select the same key or key combination used during encryption (e.g. `1, 2`).
+4. The cipher executes the inverse decryption pipeline in reverse order.
+5. The original plaintext is restored and logged to `Decryption.txt`.
 
 ---
 
-### Option C: Load / Generate Image Key
+### Option C: Load / Generate Media Key (Image / Music)
 
-Select option **`C`** to either:
-1. **Generate New Sample Key Image**: Creates a colorful 24-bit `.bmp` image in `key_images/key_image_<id>.bmp`, generates its cryptographic code, derives the substitution key, and registers it.
-2. **Load & Register Existing Image File**: Enter the path to any `.png`, `.jpg`, `.bmp`, or other image file to convert it into an Image Key.
-
----
-
-### Option D: Manage & Inspect Image Keys
-
-Select option **`D`** to enter the Image Key Management Sub-Menu:
+Select option **`C`** to access the media key generation and enrollment menu:
 
 ```text
-[1] Show All Keys Overview
-[2] Inspect Detailed Character Mapping & Image Code
-[3] Load & Register Image File
-[4] Generate Sample Key Image (.bmp)
-[5] Delete an Image Key
-[6] Return to Main Menu
+[1] Generate Sample Key Image (.bmp)
+[2] Generate Sample Key Music (.wav)
+[3] Load Existing Image File (PNG, JPG, BMP, etc.)
+[4] Load Existing Music File (MP3, WAV, OGG, FLAC, etc.)
+[5] Return to Main Menu
 ```
 
-#### 1. Show All Keys Overview
-Displays a summary table of all stored keys:
-- **Key #**: Identifier.
-- **Image File**: Filename of the source image.
-- **Image Code (SHA-256)**: Cryptographic fingerprint preview.
-- **Size**: Image file size in bytes.
-- **Created At**: Timestamp (`YYYY-MM-DD HH:MM:SS`).
-- **Mapped**: Total substituted characters (95 chars).
+- **Generate Sample Key Image**: Synthesizes a valid 24-bit colorful `.bmp` image in `key_media/key_image_<id>.bmp` using pure Python.
+- **Generate Sample Key Music**: Synthesizes a valid 16-bit 44.1kHz musical arpeggio `.wav` audio file in `key_media/key_music_<id>.wav`.
+- **Load Existing File**: Specify the path to any existing image or audio track on your computer.
 
-#### 2. Detailed Character Mapping Inspector
-Prompts for a key ID and displays:
-- Complete image metadata (path, file size, timestamp, full 64-character SHA-256 hash).
-- **Alphabet Substitution Table**: Lowercase (`a-z`) and Uppercase (`A-Z`).
-- **Numbers & Symbols Table**: Digits (`0-9`), space, and punctuation mappings.
+---
 
-#### 3. Delete an Image Key
-Permanently deletes a key from active memory and updates `keys.json`.
+### Option D: Manage & Inspect Keys
+
+Select option **`D`** to manage stored keys:
+- **Show All Keys Overview**: Lists all enrolled keys with icons (🖼️ Image / 🎵 Music), filenames, SHA-256 codes, and timestamps.
+- **Detailed Inspector**: Displays full 64-character SHA-256 code, file size, and complete character substitution tables (Alphabet, Numbers, Symbols).
+- **Delete Key**: Permanently deletes a key from active memory and updates `keys.json`.
 
 ---
 
 ### Option E: File Cryptography (.txt Documents)
 
-Encrypt or decrypt text files without copying and pasting:
-
-1. Select option **`E`**.
-2. Choose operation: `encrypt`, `decrypt`, or `back`.
-3. Provide the path to your source file (e.g., `report.txt`).
-4. Accept the default destination file name (e.g., `report_encrypted.txt`) or type a custom destination.
-5. Select the key number to process with.
-6. The file is processed and written to disk with an operational confirmation card.
-
----
-
-### Option X: Clean Exit
-
-Select **`X`** or press `Ctrl+C` at any prompt to exit cleanly without runtime warnings or unhandled exceptions.
+Encrypt or decrypt text files on disk:
+1. Choose operation (`encrypt` or `decrypt`).
+2. Enter the source text file path.
+3. Enter destination file path (defaults to `<name>_encrypted.txt`).
+4. Select 1 or multiple keys (e.g. `1, 2` to combine Image + Music).
+5. The file is encrypted/decrypted and saved to disk.
 
 ---
 
 ## Key Storage & JSON Persistence
 
-All substitution keys are saved locally in [keys.json](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/keys.json). The schema supports metadata tracking:
+All keys and metadata are saved automatically to `keys.json`:
 
 ```json
 {
   "1": {
-    "created_at": "2026-10-14 02:51:24",
+    "created_at": "2026-10-18 20:14:00",
+    "file_path": "key_media/key_image_1.bmp",
+    "media_type": "image",
+    "code": "24073ca421286a863641629cc32f909d637d7627737da1e7aa387f44d7731302",
+    "byte_size": "49206",
     "mapping": {
-      "a": "V",
-      "b": "A",
-      "c": "N",
-      "A": "o",
-      "B": "w",
-      "C": "k"
+      "a": "x",
+      "0": "%",
+      "!": "K"
+    }
+  },
+  "2": {
+    "created_at": "2026-10-18 20:14:05",
+    "file_path": "key_media/key_music_2.wav",
+    "media_type": "music",
+    "code": "8b4e7c1039da5f214f828a476ce1e98d893fae2056d028b1e4c730198aa47b62",
+    "byte_size": "88244",
+    "mapping": {
+      "x": "9",
+      "%": "M",
+      "K": "b"
     }
   }
 }
 ```
 
-- **Backward Compatibility**: If legacy raw dictionary keys are detected in `keys.json`, they are automatically imported with a fallback timestamp.
-- **Automatic Reload**: On module import, [key_module.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/key_module.py) loads existing keys into memory so they are immediately available for use.
-
 ---
 
 ## Audit Logging System
 
-Every message encryption and decryption is automatically appended to persistent audit log files with full operational metadata.
-
-### Example `Encryption.txt` Entry
+Every cryptographic operation appends a detailed entry to `Encryption.txt` or `Decryption.txt`:
 
 ```text
 ------------------------------------------------------------------------------------------------------------------------
-Wednesday, October 14 2026 at 03:02 AM
+Sunday, October 18 2026 at 08:14 PM
 
-Original Message: Confidential Mission 2026!
-Key Number: 1
+Cipher Engine: Multi-Key Media Cipher (2 Layer(s))
+Original Message: Top Secret 2026: Project Enigma [Launch Code #99!]
+Key Combination: #1 (image) + #2 (music)
+  [Layer 1] Key #1 (IMAGE) | File: key_media/key_image_1.bmp | SHA-256: 24073ca421286a86...
+  [Layer 2] Key #2 (MUSIC) | File: key_media/key_music_2.wav | SHA-256: 8b4e7c1039da5f21...
 
-Original Alphabet: a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-Substitute Alphabet: V A N T g D u m i d Y c a S e U O H v F E I B M q C o w k n p j r G b J y R Q x X P Z W h z l t s L K f
-
-Encryption Result: NeoDitsSFeac AvvseS 2026!
-------------------------------------------------------------------------------------------------------------------------
-```
-
-### Example `Decryption.txt` Entry
-
-```text
-------------------------------------------------------------------------------------------------------------------------
-Wednesday, October 14 2026 at 03:03 AM
-
-Original Message: NeoDitsSFeac AvvseS 2026!
-Key Number: 1
-
-Original Alphabet: a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-Substitute Alphabet: V A N T g D u m i d Y c a S e U O H v F E I B M q C o w k n p j r G b J y R Q x X P Z W h z l t s L K f
-
-Decryption Result: Confidential Mission 2026!
+Encryption Result: och}c#rac55$Rcr8t8K;r&#c5#rFCtt"r!3J[
 ------------------------------------------------------------------------------------------------------------------------
 ```
 
@@ -399,9 +434,7 @@ Decryption Result: Confidential Mission 2026!
 
 ## Automated Unit Testing
 
-The project includes unit test coverage in [test_enigma.py](file:///d:/dnzdaorick/OneDrive%20-%20Malayan%20Colleges%20Laguna/Programming/Python/Program%20Projects/Enigma%20Machine/test_enigma.py) utilizing Python's built-in `unittest` framework.
-
-### Running the Test Suite
+Run the built-in test suite:
 
 ```bash
 # Windows
@@ -411,51 +444,24 @@ py -m unittest test_enigma.py -v
 python3 -m unittest test_enigma.py -v
 ```
 
-### Test Coverage Highlights
-
-- `test_encrypt_and_decrypt_roundtrip`: Verifies that encrypting and subsequently decrypting a message restores the exact original text.
-- `test_preserves_punctuation_and_spaces`: Validates that spaces, digits, and special characters remain unmodified in place.
-- `test_strict_mode_strips_spaces`: Tests non-formatting mode (`preserve_formatting=False`).
-- `test_generate_key_structure`: Confirms generated keys contain 52 unique mapping pairs for all lowercase and uppercase letters.
-- `test_key_persistence_json`: Verifies saving, reloading, and clearing key stores via temporary JSON files.
-- `test_delete_key`: Verifies deletion from active memory and JSON persistence.
-- `test_select_key`: Ensures valid key retrieval and graceful `None` handling for invalid keys.
-- `test_menu_add_option_chaining`: Checks builder pattern method chaining for menu items.
-- `test_verify_user_code`: Validates user menu option code verification logic.
-
----
-
-## Troubleshooting & FAQ
-
-### 1. `Python was not found` on Windows
-If running `python` prompts the Microsoft Store, use the official Python launcher:
-```powershell
-py main.py
-```
-Alternatively, disable Microsoft Store execution aliases in:
-*Windows Settings > Apps > Advanced app settings > App execution aliases*.
-
-### 2. PowerShell Script Execution Error (`Activate.ps1`)
-If activating the virtual environment raises an `ExecutionPolicy` error:
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-.venv\Scripts\Activate.ps1
-```
-
-### 3. Terminal Formatting & Colors
-For the best visual experience with Rich tables and spinners, run the program in:
-- **Windows Terminal** (recommended for Windows 10/11)
-- **PowerShell 7+**
-- **iTerm2 / Alacritty / GNOME Terminal** (macOS / Linux)
+### Test Coverage Highlights:
+- Media type detection (Image vs Music vs Binary Media).
+- Deterministic code generation from image bytes and audio bytes.
+- Single-key roundtrip encryption/decryption.
+- **Two-key cascade roundtrip** (combining Image + Music keys).
+- **Three-key cascade roundtrip**.
+- Multi-key syntax resolution (`1`, `1, 2`, `1 2`, direct paths).
+- Multiline newline preservation.
+- JSON storage persistence and key deletion.
 
 ---
 
 ## Security Notice
 
-This application implements an **Image Key Substitution Cipher**, a custom cryptographic cipher created for educational, demonstration, and text processing purposes.
+This application implements a **Multi-Key Media Substitution Cipher**, designed for educational, demonstration, and personal text processing purposes.
 
 > [!NOTE]
-> While the image-derived key space covers 95 printable characters ($95! \approx 10^{148}$) and hashes images with SHA-256, mono-character substitution ciphers remain susceptible to advanced frequency analysis if large texts are encrypted. For production-grade secrets, consider modern block ciphers like AES-GCM or ChaCha20-Poly1305.
+> Combining multiple media keys (Image + Music) significantly increases complexity through multi-rotor cascade layering ($(95!)^M$). However, substitution ciphers remain distinguishable under statistical language frequency analysis when encrypting very large texts. For military or high-security production environments, use modern authenticated block ciphers like AES-256-GCM.
 
 ---
 

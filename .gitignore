@@ -8,6 +8,7 @@ Encryption.txt
 Decryption.txt
 keys.json
 key_images/
+key_media/
 
 # Virtual environments
 .venv/
